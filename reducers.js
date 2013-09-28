@@ -34,6 +34,8 @@ function partial(lambda) {
 
   return partiallyApplied;
 }
+export partial;
+
 
 function reducible(reduce) {
   /*
@@ -43,6 +45,8 @@ function reducible(reduce) {
   */
   return { reduce: reduce };
 }
+export reducible;
+
 
 function reduced(value) {
   /* Box value to mark it reduced (finished reducing).
@@ -53,16 +57,30 @@ function reduced(value) {
   }
 }
 
+
 function isReduced(value) {
-  /* Check if a value has been boxed with `reduced()`. */
+  /* Check if a value has been boxed with `reduced()`.
+  Returns boolean. */
   return value && value.is === reduced;
 }
+export isReduced;
+
 
 function isError(thing) {
   /* An error is any thing who's toString value is '[object Error]'.
   Returns boolean */
-  return thing.toString() === '[object Error]';
+  return thing && thing.toString() === '[object Error]';
 }
+export isError;
+
+
+function isEmpty(thing) {
+  /* Check if a thing is nullish (undefined, null or void(0)).
+  Returns a boolean. */
+  return thing == null;
+}
+export isEmpty;
+
 
 function wrapReducerEnforceEnded(reducer) {
   /*
@@ -81,25 +99,28 @@ function wrapReducerEnforceEnded(reducer) {
     // exception if further items are sent.
     if (isEnded) throw new Error('Source attempted to send item after it ended');
 
-    // Accumulate item with `next`. Note that item may be error.
-    accumulated = reducer(accumulated, item);
+    // Accumulate item with `next`. Note that item may be error. This is
+    // intentional since errors mark end of source, and some reducers may need
+    // to react to end of stream.
+    var reduction = reducer(accumulated, item);
 
-    // If item is an error, source is ended. Return accumulated value.
+    // If item is an error, source is ended.
+    // Likewise, if reducer passed back a result that is an error, source is ended.
+    isEnded = (isError(item) || isError(reduction));
+
+    // If ended, return last accumulated value boxed, so we know it is finished.
     // 
-    // @TODO could get rid of this branching logic by marking end of reduction
-    // with boxed accumulated value instead of error.
-    if(isEnded = isError(item)) return reduced(accumulated);
-
-    // If `next` passed back a boxed `reduced` value, mark source ended.
-    // @TODO could get rid of this branching logic by marking end of reduction
-    // with errors instead of boxed accumulated value.
-    isEnded = isReduced(accumulated);
-
-    return accumulated;
+    // Note that this means the final reduction step will happen twice, but since
+    // the result of both steps is the same, it doesn't matter.
+    // 
+    // If neither source nor reducer passed an error, return result of reducer
+    // and continue reduction.
+    return isEnded ? reduced(accumulated) : reduction;
   }
 
   return nextUntilEnd;
 }
+
 
 function accumulate(source, next, initial) {
   /*
@@ -110,41 +131,54 @@ function accumulate(source, next, initial) {
   For most cases, you will want to use `reduce`, unless you want to handle
   errors and stream ends manually.
   */
-  return source.reduce(wrapReducerEnforceEnded(next), initial);
+
+  // If source has a reduce method, reduce with that. Otherwise, simply call
+  // next with initial value and source (reduction for non-reducible values).
+  return source.reduce ? source.reduce(wrapReducerEnforceEnded(next), initial) :
+                         next(initial, source);
 }
+export accumulate;
+
 
 function deliver_(future, value) {
-  // Where future is any object with optional next and initial properties.
+  /* Deliver a future, where future is any object with optional next and
+  initial properties.
+
+  Mutates the future and returns empty. */
+
+  // Assign the value to the future.
   future.value = value;
+
+  // Mark delivered.
   future.delivered = true;
+
+  // Kick off accumulation of the value.
   if (future.next) accumulate(value, future.next, future.initial);
 }
 
-function futureReducible(source) {
-  /* Wrap any reducible source that may or may not return a value. Promise
-  a future value using an intermediate object. */
-  return reducible(function futureReduce(next, initial) {
-    var future = this;
 
-    function forward(accumulated, item) {
-      // If accumulation is finished with error, deliver.
-      if(isError(item)) deliver_(future, accumulated);
+/* Define a reducible factory to be used as a futures mechanism.
 
-      accumulated = next(accumulated, item);
+@TODO there is a flaw in the logic of my reducer somewhere. I'm getting a 
+source does not exist error from accumulate.
 
-      // If `next` finished accumulating, deliver.
-      if(isReduced(accumulated)) deliver_(future, accumulated);
+Actually, I think the issue is that I'm trying to accumulate non-accumulatables.
+Yeah that seems to be it.
+*/
+var future = partial(Object.create, reducible(function futureReduce(next, initial) {
+  // @TODO there is still some kind of bug with futures. Reductions never happen.
+  // Uses instance to keep track of things.
+  var future = this;
 
-      return accumulated;
-    }
+  // If future has been delivered, return the final reduction of the true value.
+  if (future.delivered) return accumulate(future.value, next, initial);
 
-    var accumulated = source.reduce(wrapReducerEnforceEnded(forward), initial);
+  // Otherwise, keep next and initial around so we can use them for the
+  // eventual reduction.
+  future.next = next;
+  future.initial = initial;
+}));
 
-    if(accumulated) deliver_(future, accumulated);
-
-    return future.delivered ? future.value : future;
-  });
-}
 
 function reduce(source, next, initial) {
   /*
@@ -155,39 +189,24 @@ function reduce(source, next, initial) {
   like a Promise in that sense.
   
   Returns a value or reducible.
-
-  @TODO This isn't working with arrays, and I think its because arrays don't have an
-  "end". Maybe?
   */
-
-  // Create a prototypal instance of `__future__`.
-  // This future object acts as a bridge between `forward` and `reduceFuture`.
-  var future = Object.create(__future__);
+  var f = future();
 
   function forward(accumulated, item) {
-    // If accumulation is finished, deliver.
-    if(isError(item)) future.deliver(accumulated);
-
-    accumulated = next(accumulated, item);
-
-    // If `next` finished accumulating, deliver.
-    if(isReduced(accumulated)) future.deliver(accumulated);
-
-    return accumulated;
+    // If source is exausted and sends error, deliver accumulation.
+    // Otherwise, continue accumulation.
+    return isError(item) ? deliver_(f, accumulated) :
+           next(accumulated, item);
   }
+  
+  var accumulated = accumulate(source, forward, initial);
 
-  // It is key that we start reduction immediately.
-  // the problem with simply returning a reducible is that the result will never
-  // be accumulated because we keep passing back reducibles to infinity.
-  var accumulated = source.reduce(wrapReducerEnforceEnded(forward), initial);
+  if(!isEmpty(accumulated)) deliver_(f, accumulated);
 
-  // If reduce returned a value, return that.
-  if (accumulated != null) return accumulated;
-
-  // If future has been delivered immediately, return the value. Otherwise,
-  // return a reducible good for the value when ready.
-  return future.delivered ? future.value : future;
+  return f.delivered ? f.value : f;
 }
+export reduce;
+
 
 function reducer(xlambda, source, additional) {
   /**
@@ -220,7 +239,7 @@ function reducer(xlambda, source, additional) {
   // `next` is the reducer function we are transforming. We are essentially
   // wrapping it with `xlambda` provided the value is not an error.
   return reducible(function reduceReducerTransform(next, initial) {
-    return reduce(source, function sourceReducer(accumulated, item) {
+    accumulate(source, function sourceReducer(accumulated, item) {
       // If value is an error just propagate through to reducing function,
       // otherwise call `lambda` with all the curried `additional` and `next`
       // continuation function.
@@ -229,6 +248,7 @@ function reducer(xlambda, source, additional) {
     });
   });
 }
+
 
 var map = partial(reducer, function mapTransform(mapper, next, accumulated, item) {
   /**
@@ -243,6 +263,8 @@ var map = partial(reducer, function mapTransform(mapper, next, accumulated, item
   **/
   return next(accumulated, mapper(item));
 });
+export map;
+
 
 function merge(source) {
   /**
@@ -286,11 +308,14 @@ function merge(source) {
     })
   });
 }
+export merge;
+
 
 function add_(array, item) {
   array.push(item);
   return array;
 }
+
 
 function into(source, array) {
   return reduce(source, add_, array || []);
