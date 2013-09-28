@@ -59,7 +59,9 @@ function isReduced(value) {
 }
 
 function isError(thing) {
-  return thing instanceof Error;
+  /* An error is any thing who's toString value is '[object Error]'.
+  Returns boolean */
+  return thing.toString() === '[object Error]';
 }
 
 function wrapReducerEnforceEnded(reducer) {
@@ -82,10 +84,15 @@ function wrapReducerEnforceEnded(reducer) {
     // Accumulate item with `next`. Note that item may be error.
     accumulated = reducer(accumulated, item);
 
-    // If item is an error, source is ended. Return accumulated value
+    // If item is an error, source is ended. Return accumulated value.
+    // 
+    // @TODO could get rid of this branching logic by marking end of reduction
+    // with boxed accumulated value instead of error.
     if(isEnded = isError(item)) return reduced(accumulated);
 
     // If `next` passed back a boxed `reduced` value, mark source ended.
+    // @TODO could get rid of this branching logic by marking end of reduction
+    // with errors instead of boxed accumulated value.
     isEnded = isReduced(accumulated);
 
     return accumulated;
@@ -106,24 +113,37 @@ function accumulate(source, next, initial) {
   return source.reduce(wrapReducerEnforceEnded(next), initial);
 }
 
-// Define `__future__`, a reducible object we use as a prototype for future
-// values in `reduce`.
-var __future__ = {
-  deliver: function deliverFuture_(value) {
-    /*
-    Deliver a future's value. Mutates the future object.
-    No return value.
-    */
-    this.value = value;
-    this.delivered = true;
-    if (this.next) accumulate(value, this.next, this.initial);
-  },
+function deliver_(future, value) {
+  // Where future is any object with optional next and initial properties.
+  future.value = value;
+  future.delivered = true;
+  if (future.next) accumulate(value, future.next, future.initial);
+}
 
-  reduce: function reduceFuture_(next, initial) {
-    if(this.delivered) return accumulate(this.value, next, initial);
-    this.next = next;
-    this.initial = initial;
-  }
+function futureReducible(source) {
+  /* Wrap any reducible source that may or may not return a value. Promise
+  a future value using an intermediate object. */
+  return reducible(function futureReduce(next, initial) {
+    var future = this;
+
+    function forward(accumulated, item) {
+      // If accumulation is finished with error, deliver.
+      if(isError(item)) deliver_(future, accumulated);
+
+      accumulated = next(accumulated, item);
+
+      // If `next` finished accumulating, deliver.
+      if(isReduced(accumulated)) deliver_(future, accumulated);
+
+      return accumulated;
+    }
+
+    var accumulated = source.reduce(wrapReducerEnforceEnded(forward), initial);
+
+    if(accumulated) deliver_(future, accumulated);
+
+    return future.delivered ? future.value : future;
+  });
 }
 
 function reduce(source, next, initial) {
