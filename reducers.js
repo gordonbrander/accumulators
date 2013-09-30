@@ -157,16 +157,8 @@ function deliver_(future, value) {
 }
 
 
-/* Define a reducible factory to be used as a futures mechanism.
-
-@TODO there is a flaw in the logic of my reducer somewhere. I'm getting a 
-source does not exist error from accumulate.
-
-Actually, I think the issue is that I'm trying to accumulate non-accumulatables.
-Yeah that seems to be it.
-*/
+/* Define a reducible factory to be used as a futures mechanism. */
 var future = partial(Object.create, reducible(function futureReduce(next, initial) {
-  // @TODO there is still some kind of bug with futures. Reductions never happen.
   // Uses instance to keep track of things.
   var future = this;
 
@@ -195,6 +187,10 @@ function reduce(source, next, initial) {
   function forward(accumulated, item) {
     // If source is exausted and sends error, deliver accumulation.
     // Otherwise, continue accumulation.
+
+    // @TODO this is not working with arrays that are mapped because they never
+    // send an error, and map transforms them into a reducible that requires
+    // an end-of-stream mark.
     return isError(item) ? deliver_(f, accumulated) :
            next(accumulated, item);
   }
