@@ -216,6 +216,36 @@ var map = reducer(function mapTransform(mapper, next, accumulated, item) {
 export map;
 
 
+function add_(array, item) {
+  // Push an item into array and return array.
+  // Mutates the array.
+  array.push(item);
+  return array;
+}
+
+
+function into(source, array) {
+  // Accumulate a source's values into an array.
+  return reduce(source, add_, array || []);
+}
+export into;
+
+
+function append(left, right) {
+  return reducible(function reduceAppend(next, initial) {
+    var accumulatedL = reduce(left, next, initial);
+
+    function reduceRight(_, accumulatedL) {
+      return reduce(right, next, accumulatedL);
+    }
+
+    // When accumulation of left is finished, reduce right.
+    return reduce(accumulatedL, reduceRight);
+  });
+}
+export append;
+
+
 function merge(source) {
   /**
   Merges given collection of collections to a collection with items of
