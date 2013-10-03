@@ -15,4 +15,4 @@ compile_amd:
 
 tests:
 	make compile_node
-	node test/reducers.js
+	mocha --ui bdd --reporter list --timeout 2000 ./test/reducers.js
