@@ -68,41 +68,24 @@ function enforceReducerEnd(reducer) {
   var isEnded = false;
 
   function nextUntilEnd(accumulated, item) {
-    // After a source is ended, it should not send further items. Throw an
+    // After a source has been ended, it should not send further items. Throw an
     // exception if further items are sent.
     if (isEnded) throw new Error('Source attempted to send item after it ended');
 
-    // Accumulate item with `next`. Note that item may be error. This is
-    // intentional since errors mark end of source, and some reducers may need
-    // to react to end of stream.
-    var reduction = reducer(accumulated, item);
+    // If item isn't end-of-source token, accumulate item with `next`.
+    // If item is end-of-source token, keep accumulated value from last reduce
+    // step.
+    accumulated = (item === end) ? accumulated : reducer(accumulated, item);
 
-    // If item is an error, source is ended.
-    // Likewise, if reducer passed back a result that is an error, source is ended.
-    isEnded = (item === end || reduction === end);
+    // If item is end token, source is ended.
+    // Likewise, if reducer passed back end token, source is ended.
+    isEnded = (item === end || accumulated === end);
 
-    // If ended, return last accumulated value boxed, so we know it is finished.
-    // 
-    // Note that this means the final reduction step will happen twice, but since
-    // the result of both steps is the same, it doesn't matter.
-    // 
-    // If neither source nor reducer passed an error, return result of reducer
-    // and continue reduction.
-    return reduction;
+    // Return reduction.
+    return accumulated;
   }
 
   return nextUntilEnd;
-}
-
-
-function swallowReducerEnd(reducer) {
-  function nextSwallowEnd(accumulated, item) {
-    // A new reducer that will call original reducer as long as item is not
-    // an error.
-    return item !== end ? reducer(accumulated, item) : accumulated;
-  }
-
-  return nextSwallowEnd;
 }
 
 
@@ -147,7 +130,7 @@ function futureReducible(reduce) {
   // future reducible will be returned from the transformed function.
   // Errors are used to mark the end of reduction.
   return reducible(function futureReduce(next, initial) {
-    next = enforceReducerEnd(swallowReducerEnd(next));
+    next = enforceReducerEnd(next);
 
     var f = create(__future__);
 
