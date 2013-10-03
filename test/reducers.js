@@ -24,19 +24,20 @@ function makeAssertK(value) {
   }
 }
 
-function makeIntervalReducible() {
+function makeIntervalReducible(array) {
+  array = array.slice();
+
   return futureReducible(function (next, initial) {
-    var counter = 0;
     var accumulated = initial;
     var id;
 
     id = setInterval(function () {
-      if (counter === 3) {
+      if (array.length === 0) {
         next(accumulated, end);
         clearInterval(id);
       }
       else {
-        accumulated = next(accumulated, counter++);
+        accumulated = next(accumulated, array.pop());
       }
     }, 1);
   });
@@ -58,7 +59,25 @@ describe('reduce() primitive', function () {
 });
 
 describe('futureReducible() reduction', function () {
-  var x = makeIntervalReducible();
+  it('should throw an exception if source ends and continues to send values', function() {
+    var a = makeIntervalReducible([0, 1, end, 2, 3, 4, 5, 6, 7]);
+
+    assert.throws(function () {
+      reduce(a, function(_, __) {});
+    });
+  });
+
+  it('should throw an exception if reducer ends source early and source continues to send values', function() {
+    var a = makeIntervalReducible([0, 1, 2]);
+
+    assert.throws(function () {
+      reduce(a, function () {
+        return end;
+      });
+    });
+  });
+
+  var x = makeIntervalReducible([0, 1, 2]);
 
   var a = reduce(x, function (accumulated, num) {
     return accumulated + num;
@@ -71,14 +90,6 @@ describe('futureReducible() reduction', function () {
       assert(sum === 3);
       done();
     });
-  });
-
-  it('should not allow multiple reductions on the same source', function(done) {
-    assert.throws(function () {
-      reduce(a, function(_, __) {});
-    }, Error);
-
-    done();
   });
 });
 
@@ -109,15 +120,22 @@ describe('into()', function () {
     assert(x[0] === y[0]);
   });
 
-  it('should accumulate values of futureReducible, returning future for reduction', function (done) {
-    var x = makeIntervalReducible();
+  it('INTENTIONALLY FAILS should accumulate values of futureReducible, returning future for reduction', function (done) {
+    var x = makeIntervalReducible([0, 1, 2]);
 
     var y = into(x);
 
     reduce(y, function (_, y) {
-      /* @TODO this is failing because reducer is being hit with every value in
-      y, instead of accumulated array. I think this is a bug in futureReducible
-      and the way it resolves futures. */
+      /* @TODO 2013-10-03 this is failing because reducer is being hit with
+      every value in y, instead of accumulated array. I think this is a bug 
+      in futureReducible and the way it resolves futures.
+
+      2013-10-03T11:49
+      I think this may be a tradeoff of the approach... reduceFuture will reduce
+      the value in order to resolve values that are themselves future values.
+      The problem is, if the value is an array, that means you get ordinary
+      array reduction. I think I'm ok with that.
+      */
       assert(y instanceof Array);
       assert(y[0] === 0);
       assert(y[1] === 1);
@@ -147,8 +165,8 @@ describe('append() arrays', function () {
 });
 
 describe('append() futureReducible()', function () {
-  var a = makeIntervalReducible();
-  var b = makeIntervalReducible();
+  var a = makeIntervalReducible([0, 1, 2]);
+  var b = makeIntervalReducible([0, 1, 2]);
 
   var c = append(a, b);
 

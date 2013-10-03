@@ -94,7 +94,7 @@ values.
 
 @TODO I should either handle multiple reductions on futures, or prevent
 multiple reductions on pending futures. */
-var __future__ = reducible(function futureReduce(next, initial) {
+var __future__ = reducible(function reduceFuture(next, initial) {
   // Uses instance to keep track of things.
   var future = this;
 
@@ -129,7 +129,7 @@ function futureReducible(reduce) {
   // It is not necessary that the reduce function return a value. A
   // future reducible will be returned from the transformed function.
   // Errors are used to mark the end of reduction.
-  return reducible(function futureReduce(next, initial) {
+  return reducible(function reduceFutureReducible(next, initial) {
     next = enforceReducerEnd(next);
 
     var f = create(__future__);
