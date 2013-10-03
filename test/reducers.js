@@ -2,7 +2,7 @@ var r = require('../node/reducers.js');
 var reduce = r.reduce;
 var map = r.map;
 var futureReducible = r.futureReducible;
-var isError = r.isError;
+var end = r.end;
 
 var assert = require("assert");
 
@@ -21,16 +21,6 @@ function assertAsync(value) {
     done();
   }
 }
-
-describe('isError', function () {
-  var error = new Error('Test error');
-  var a = null;
-  var b = true;
-  var c = 1;
-
-  it("should return true for errors", assertAsync(isError(error)));
-  it("should return false for other values", assertAsync(!isError(a) && !isError(b) && !isError(c)));
-});
 
 describe('Array reduction', function () {
   var a1 = [1, 1, 1];
@@ -55,7 +45,7 @@ describe('futureReducible reduction', function () {
 
     id = setInterval(function () {
       if (counter === 3) {
-        next(accumulated, new Error('End of intervals'));
+        next(accumulated, end);
         clearInterval(id);
       }
       else {

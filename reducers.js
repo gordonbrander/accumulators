@@ -31,6 +31,7 @@ Disadvantages:
 
 var create = Object.create;
 
+
 function reducible(reduce) {
   /*
   Define a new reducible. A reducible is any object with a reduce method.
@@ -41,20 +42,18 @@ function reducible(reduce) {
 export reducible;
 
 
-function isError(thing) {
-  /* An error is any thing who's toString value is '[object Error]'.
-  Returns boolean */
-  return thing && thing instanceof Error;
-}
-export isError;
-
-
 function isEmpty(thing) {
   /* Check if a thing is nullish (undefined, null or void(0)).
   Returns a boolean. */
   return thing == null;
 }
 export isEmpty;
+
+
+// End is our token representing the end of reduction for a future reducible.
+// We use it to mark the end of a stream with future reducibles.
+var end = "[Token for end of reduction]";
+export end;
 
 
 function enforceReducerEnd(reducer) {
@@ -80,7 +79,7 @@ function enforceReducerEnd(reducer) {
 
     // If item is an error, source is ended.
     // Likewise, if reducer passed back a result that is an error, source is ended.
-    isEnded = (isError(item) || isError(reduction));
+    isEnded = (item === end || reduction === end);
 
     // If ended, return last accumulated value boxed, so we know it is finished.
     // 
@@ -100,7 +99,7 @@ function swallowReducerEnd(reducer) {
   function nextSwallowEnd(accumulated, item) {
     // A new reducer that will call original reducer as long as item is not
     // an error.
-    return !isError(item) ? reducer(accumulated, item) : accumulated;
+    return item !== end ? reducer(accumulated, item) : accumulated;
   }
 
   return nextSwallowEnd;
@@ -156,7 +155,7 @@ function futureReducible(reduce) {
       // If source is exausted and sends error, or reducer returns an error,
       // deliver final accumulation. Otherwise, continue accumulation.
       var reduction = next(accumulated, item);
-      var isEnded = isError(item) || isError(reduction);
+      var isEnded = item === end || reduction === end;
       return isEnded ? deliver_(f, accumulated) :
                        reduction;
     }
