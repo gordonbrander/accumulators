@@ -226,6 +226,8 @@ function add_(array, item) {
 
 function into(source, array) {
   // Accumulate a source's values into an array.
+  // @TODO maybe wrap array in array? This takes care of the reduce/reduction
+  // problem when dealing with reducible promises.
   return reduce(source, add_, array || []);
 }
 export into;
@@ -245,38 +247,3 @@ function append(left, right) {
 }
 export append;
 
-
-function merge(source) {
-  /**
-  Merges given collection of collections to a collection with items of
-  all nested collections. Note that items in the resulting collection
-  are ordered by the time rather then index, in other words if item from
-  the second nested collection is deliver earlier then the item
-  from first nested collection it will in appear earlier in the resulting
-  collection.
-
-  merge([ [1, 2], [3, 4] ])
-  => < 1 2 3 4 >
-
-  @TODO this implementation is wrong, but I think the idea is basically right.
-  **/
-  return reducible(function accumulateMerged(next, initial) {
-    // Closure variables that `forward` has access to.
-    var open = 1;
-    var accumulated = initial;
-
-    function forward(accumulated, item) {
-      open = open - 1;
-      return next(accumulated, item);
-    }
-
-    function accumulateMergedSource(accumulated, nested) {
-      open = open + 1;
-      return reduce(nested, forward, accumulated);
-    }
-
-    var acccumulated = reduce(source, accumulateMergedSource, initial);
-    return reduce(accumulated, forward, initial)
-  });
-}
-export merge;
