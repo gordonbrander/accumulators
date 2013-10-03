@@ -1,7 +1,9 @@
+import { reducible, map } from "reducers";
+
 function preload(src) {
   return reducible(function preloadReduce(next, initial) {
     function handler(event) {
-      next(initial, event);
+      next(next(initial, event), new Error("Image loaded."));
     }
 
     var img = new Image();
@@ -9,7 +11,9 @@ function preload(src) {
     img.src = src;
   });
 }
+export preload;
 
 function preloadAll(srcs) {
-  return into(map(srcs, preload));
+  return map(srcs, preload);
 }
+export preloadAll;
