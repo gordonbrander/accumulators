@@ -3,7 +3,6 @@ var reduce = r.reduce;
 var map = r.map;
 var futureReducible = r.futureReducible;
 var end = r.end;
-var into = r.into;
 var append = r.append;
 var concat = r.concat;
 
@@ -85,15 +84,13 @@ describe('futureReducible() reduction', function () {
 
   var x = makeIntervalReducible([0, 1, 2]);
 
-  var a = reduce(x, function (accumulated, num) {
-    return accumulated + num;
-  }, 0);
+  var a = reduce(x, sum, 0);
 
   it('should return a reducible for future values', makeAssertK(typeof a.reduce === 'function'));
 
   it('should reduce future values to reduced value', function (done) {
     reduce(a, function (_, sum) {
-      assert(sum === 3);
+      assert.strictEqual(sum, 3);
       done();
     });
   });
@@ -109,49 +106,12 @@ describe('map()', function () {
 
     // ...and a second reduce for the value...
     reduce(b, function (_, sum) {
-      assert(sum === 2);
+      assert.strictEqual(sum, 2);
       done();
     });
   });
 });
 
-
-describe('into()', function () {
-  it('should produce a new identical array for arrays', function () {
-    var x = [1];
-    var y = into(x);
-
-    assert(y instanceof Array);
-    assert(x !== y);
-    assert(x[0] === y[0]);
-  });
-/*
-  it('INTENTIONALLY FAILS should accumulate values of futureReducible, returning future for reduction', function (done) {
-    var x = makeIntervalReducible([0, 1, 2]);
-
-    var y = into(x);
-
-    reduce(y, function (_, y) {
-      @TODO 2013-10-03 this is failing because reducer is being hit with
-      every value in y, instead of accumulated array. I think this is a bug 
-      in futureReducible and the way it resolves futures.
-
-      2013-10-03T11:49
-      I think this may be a tradeoff of the approach... reduceFuture will reduce
-      the value in order to resolve values that are themselves future values.
-      The problem is, if the value is an array, that means you get ordinary
-      array reduction. I think I'm ok with that.
-
-      assert(y instanceof Array);
-      assert(y[0] === 0);
-      assert(y[1] === 1);
-      assert(y[2] === 2);
-
-      done();
-    });
-  });
-*/
-});
 
 describe('append() arrays', function () {
   var a = [0, 1, 2];

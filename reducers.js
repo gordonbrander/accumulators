@@ -90,16 +90,18 @@ function enforceReducerEnd(reducer) {
 
 
 /* Create a future object to be used as the prototype for future reducible
-values.
-
-@TODO I should either handle multiple reductions on futures, or prevent
-multiple reductions on pending futures. */
+values. */
 var __future__ = reducible(function reduceFuture(next, initial) {
   // Uses instance to keep track of things.
   var future = this;
 
   // If future has been delivered, return the final reduction of the true value.
   if (!isEmpty(future.value)) return reduce(future.value, next, initial);
+
+  // @TODO this is where the issue is with append(). Append requires a reducer
+  // on the future, but since the future returns itself, the reducer is stomped
+  // by the reducer interested in the future value.
+  if(future.next) throw new Error('Future was reduced twice.');
 
   // Otherwise, keep next and initial around so we can use them for the
   // eventual reduction.
@@ -214,23 +216,6 @@ var map = reducer(function mapTransform(mapper, next, accumulated, item) {
   return next(accumulated, mapper(item));
 });
 export map;
-
-
-function add_(array, item) {
-  // Push an item into array and return array.
-  // Mutates the array.
-  array.push(item);
-  return array;
-}
-
-
-function into(source, array) {
-  // Accumulate a source's values into an array.
-  // @TODO maybe wrap array in array? This takes care of the reduce/reduction
-  // problem when dealing with reducible promises.
-  return reduce(source, add_, array || []);
-}
-export into;
 
 
 function append(left, right) {
