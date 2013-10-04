@@ -235,14 +235,15 @@ export into;
 
 function append(left, right) {
   return reducible(function reduceAppend(next, initial) {
-    var accumulatedL = reduce(left, next, initial);
-
-    function reduceRight(_, accumulatedL) {
-      return reduce(right, next, accumulatedL);
+    // @TODO looks like reduceRight is never called by futureReducible.
+    function reduceRight(_, accumulated) {
+      return reduce(right, next, accumulated);
     }
 
+    var accumulated = reduce(left, next, initial);
+
     // When accumulation of left is finished, reduce right.
-    return reduce(accumulatedL, reduceRight);
+    return reduce(accumulated, reduceRight);
   });
 }
 export append;
