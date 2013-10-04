@@ -247,3 +247,13 @@ function append(left, right) {
 }
 export append;
 
+
+function appendReducer(a, b) {
+  return a === null ? b : append(a, b);
+}
+
+
+function concat(source) {
+  return reduce(source, appendReducer, null);
+}
+export concat;

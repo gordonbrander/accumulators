@@ -5,6 +5,7 @@ var futureReducible = r.futureReducible;
 var end = r.end;
 var into = r.into;
 var append = r.append;
+var concat = r.concat;
 
 var assert = require("assert");
 
@@ -39,7 +40,7 @@ function makeIntervalReducible(array) {
       else {
         accumulated = next(accumulated, array.shift());
       }
-    }, 1);
+    }, 10);
   });
 }
 
@@ -179,6 +180,46 @@ describe('append() futureReducible()', function () {
 
   it('should keep items in source order', function (done) {
     var x = reduce(c, function (accumulated, item) {
+      assert(accumulated === item);
+      return accumulated + 1;
+    }, 0);
+
+    reduce(x, done);
+  });
+});
+
+describe('concat() arrays', function () {
+  var a = [0, 1];
+  var b = [2, 3];
+  var c = [4, 5];
+
+  var d = concat([a, b, c]);
+
+  it('should return a reducible', makeAssertK(typeof d.reduce === 'function'));
+
+  it('should keep items in source order', function (done) {
+    var x = reduce(d, function (accumulated, item) {
+      assert(accumulated === item);
+      return accumulated + 1;
+    }, 0);
+
+    reduce(x, done);
+  });
+});
+
+describe('concat() futureReducible()', function () {
+  var a = makeIntervalReducible([0, 1]);
+  var b = makeIntervalReducible([2, 3]);
+  var c = makeIntervalReducible([3, 4]);
+
+  var d = makeIntervalReducible([a, b, c]);
+
+  var e = concat(d);
+
+  it('should return a reducible', makeAssertK(typeof e.reduce === 'function'));
+
+  it('should keep items in source order', function (done) {
+    var x = reduce(e, function (accumulated, item) {
       assert(accumulated === item);
       return accumulated + 1;
     }, 0);
