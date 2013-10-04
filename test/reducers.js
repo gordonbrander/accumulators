@@ -166,7 +166,10 @@ describe('append() arrays', function () {
       return accumulated + 1;
     }, 0);
 
-    reduce(x, done);
+    reduce(x, function (_, i) {
+      assert.strictEqual(i, 6);
+      done();
+    });
   });
 });
 
@@ -184,7 +187,10 @@ describe('append() futureReducible()', function () {
       return accumulated + 1;
     }, 0);
 
-    reduce(x, done);
+    reduce(x, function (_, i) {
+      assert.strictEqual(i, 6);
+      done();
+    });
   });
 });
 
@@ -203,14 +209,17 @@ describe('concat() arrays', function () {
       return accumulated + 1;
     }, 0);
 
-    reduce(x, done);
+    reduce(x, function(_, i) {
+      assert.strictEqual(i, 6);
+      done();
+    });
   });
 });
 
 describe('concat() futureReducible()', function () {
   var a = makeIntervalReducible([0, 1]);
-  var b = makeIntervalReducible([2, 3]);
-  var c = makeIntervalReducible([3, 4]);
+  var b = [2, 3];
+  var c = makeIntervalReducible([4, 5]);
 
   var d = makeIntervalReducible([a, b, c]);
 
@@ -224,6 +233,9 @@ describe('concat() futureReducible()', function () {
       return accumulated + 1;
     }, 0);
 
-    reduce(x, done);
+    reduce(x, function (_, i) {
+      assert.strictEqual(i, 6);
+      done();
+    });
   });
 });
