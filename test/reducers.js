@@ -1,7 +1,8 @@
 var r = require('../node/reducers.js');
-var reduce = r.reduce;
+var accumulatable = r.accumulatable;
+var isAccumulatable = r.isAccumulatable;
+var accumulate = r.accumulate;
 var map = r.map;
-var futureReducible = r.futureReducible;
 var end = r.end;
 var append = r.append;
 var concat = r.concat;
@@ -24,10 +25,10 @@ function makeAssertK(value) {
   }
 }
 
-function makeIntervalReducible(array) {
+function makeIntervalReducible(array, interval) {
   array = array.slice();
 
-  return futureReducible(function (next, initial) {
+  return accumulatable(function (next, initial) {
     var accumulated = initial;
     var id;
 
@@ -39,164 +40,89 @@ function makeIntervalReducible(array) {
       else {
         accumulated = next(accumulated, array.shift());
       }
-    }, 10);
+    }, interval || 10);
   });
 }
 
-describe('reduce() arrays', function () {
-  var a1 = [1, 1, 1];
-  var a2 = reduce(a1, sum, 0);
+describe('isAccumulatable()', function () {
+  var x = accumulatable(function () {});
 
-  it('should return immediate results', makeAssertK(a2 === 3));
+  it('should return true for accumulatable objects', makeAssertK(isAccumulatable(x)));
+  it('should return false for other values', makeAssertK(!isAccumulatable({})));
 });
 
-describe('reduce() primitive', function () {
-  var a3 = reduce(3, function assertA2(_, sum) {
-    return sum * 2;
-  });
-
-  it("should call next with value for reduction of primitive values.", makeAssertK(a3 === 6))
-});
-
-describe('futureReducible() reduction', function () {
-  /* @TODO Mocha seems to be fing this up, as well as assert.async. It SHOULD
-  throw, and I AM catching it.
-  it('should throw an exception if source ends and continues to send values', function(done) {
-    try {
-      var a = makeIntervalReducible([0, 1, end, 2, 3, 4, 5, 6, 7]);
-      reduce(a, function(_, __) {});     
-    } catch(error) {
-      done();
-    }
-  });
-
-  it('should throw an exception if reducer ends source early and source continues to send values', function(done) {
-    try {
-      var a = makeIntervalReducible([0, 1, 2, 3, 4, 5]);
-      reduce(a, function (accumulated, item) {
-        return accumulated === 3 ? end : item;
-      }, 0);
-    } catch (error) {
-      done();
-    }
-  });
-  */
-
-  var x = makeIntervalReducible([0, 1, 2]);
-
-  var a = reduce(x, sum, 0);
-
-  it('should return a reducible for future values', makeAssertK(typeof a.reduce === 'function'));
-
-  it('should reduce future values to reduced value', function (done) {
-    reduce(a, function (_, sum) {
-      assert.strictEqual(sum, 3);
-      done();
+describe('accumulate() primitive', function () {
+  it("should call next with value for accumulation of primitive values, followed by end token.", function (done) {
+    accumulate(3, function assertA2(accumulated, num) {
+      return num === end ? (assert.strictEqual(accumulated, 3), done()) : num;
     });
+  })
+});
+
+describe('accumulate() across multiple event loop turns', function () {
+  var x = makeIntervalReducible([0, 1, 2, 3]);
+
+  it('should accumulate values over multiple turns', function (done) {
+    accumulate(x, function (accumulated, item) {
+      return (item === end) ? (assert.strictEqual(accumulated, 6), done()) : accumulated + item;
+    }, 0);
   });
 });
 
 describe('map()', function () {
-  var a = map([0, 0], function () { return 1; });
+  var x = makeIntervalReducible([0, 0, 0]);
+  var a = map(x, function () { return 1; });
 
-  it('should return a reducible object', makeAssertK(typeof a.reduce === 'function'));
+  it('should return an accumulatable object', makeAssertK(isAccumulatable(a)));
 
   it('should transform values per mapping function when reduced', function (done) {
-    var b = reduce(a, sum, 0);
-
-    // ...and a second reduce for the value...
-    reduce(b, function (_, sum) {
-      assert.strictEqual(sum, 2);
-      done();
-    });
-  });
-});
-
-
-describe('append() arrays', function () {
-  var a = [0, 1, 2];
-  var b = [3, 4, 5];
-
-  var c = append(a, b);
-
-  it('should return a reducible', makeAssertK(typeof c.reduce === 'function'));
-
-  it('should keep items in source order', function (done) {
-    var x = reduce(c, function (accumulated, item) {
-      assert(accumulated === item);
-      return accumulated + 1;
+    accumulate(a, function (accumulated, item) {
+      return item === end ? (assert.strictEqual(accumulated, 3), done()) : accumulated + item;
     }, 0);
-
-    reduce(x, function (_, i) {
-      assert.strictEqual(i, 6);
-      done();
-    });
   });
 });
 
-describe('append() futureReducible()', function () {
+describe('append()', function () {
   var a = makeIntervalReducible([0, 1, 2]);
   var b = makeIntervalReducible([3, 4, 5]);
 
   var c = append(a, b);
 
-  it('should return a reducible', makeAssertK(typeof c.reduce === 'function'));
+  it('should return an accumulatable', makeAssertK(isAccumulatable(c)));
 
   it('should keep items in source order', function (done) {
-    var x = reduce(c, function (accumulated, item) {
-      assert(accumulated === item);
+    accumulate(c, function (accumulated, item) {
+      if(item === end) {
+        assert.strictEqual(accumulated, 6);
+        done();
+        return accumulated;
+      }
+
+      assert.strictEqual(accumulated, item);
       return accumulated + 1;
     }, 0);
-
-    reduce(x, function (_, i) {
-      assert.strictEqual(i, 6);
-      done();
-    });
   });
 });
 
-describe('concat() arrays', function () {
-  var a = [0, 1];
-  var b = [2, 3];
-  var c = [4, 5];
+describe('concat()', function () {
+  var a = makeIntervalReducible([0, 1, 2]);
+  var b = makeIntervalReducible([3, 4, 5]);
+  var c = makeIntervalReducible([a, b]);
 
-  var d = concat([a, b, c]);
+  var d = concat(c);
 
-  it('should return a reducible', makeAssertK(typeof d.reduce === 'function'));
-
-  it('should keep items in source order', function (done) {
-    var x = reduce(d, function (accumulated, item) {
-      assert(accumulated === item);
-      return accumulated + 1;
-    }, 0);
-
-    reduce(x, function(_, i) {
-      assert.strictEqual(i, 6);
-      done();
-    });
-  });
-});
-
-describe('concat() futureReducible()', function () {
-  var a = makeIntervalReducible([0, 1]);
-  var b = [2, 3];
-  var c = makeIntervalReducible([4, 5]);
-
-  var d = makeIntervalReducible([a, b, c]);
-
-  var e = concat(d);
-
-  it('should return a reducible', makeAssertK(typeof e.reduce === 'function'));
+  it('should return an accumulatable', makeAssertK(isAccumulatable(d)));
 
   it('should keep items in source order', function (done) {
-    var x = reduce(e, function (accumulated, item) {
-      assert(accumulated === item);
+    accumulate(d, function (accumulated, item) {
+      if(item === end) {
+        assert.strictEqual(accumulated, 6);
+        done();
+        return accumulated;
+      }
+
+      assert.strictEqual(accumulated, item);
       return accumulated + 1;
     }, 0);
-
-    reduce(x, function (_, i) {
-      assert.strictEqual(i, 6);
-      done();
-    });
   });
 });

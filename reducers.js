@@ -1,45 +1,44 @@
-/* Reducers
+/* Accumulators
 -----------------------------------------------------------------------------
 
-I'm taking a slightly different approach to this with my version. A reducible is
-defined as:
+Because I'm dealing with issues of multiple consumers of futures in futureReduce
+approach, going to try a judo move and get rid of the concept of return values
+altogether. Only accumulate. The magic of reducers is after all async, not arrays.
 
-* Any object with a reduce method
-* That returns a value
 
-Reduce can be used on any value.
+* https://github.com/Gozala/reducers/
+* https://github.com/Gozala/reducible/
+* http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html
+* http://clojure.com/blog/2012/05/15/anatomy-of-reducer.html
 
-futureReducible is provided to help manage future values. It returns a reducible
-"future" object good for the value of the reduction.
-
-Advantages:
-
-* All methods are simply used as provided, including native array methods.
-* No transformations on reducers that are used on native arrays (faster).
-* Clearer program flow (I think).
-* No need for a low-level accumulate function.
-* End of reduction can be found via a second reduction, rather than wrapping
-  the reducer.
-
-Disadvantages:
-
-* Not sure yet.
 */
 
-// https://github.com/Gozala/reducers/
-// https://github.com/Gozala/reducible
 
-var create = Object.create;
-
-
-function reducible(reduce) {
-  /*
-  Define a new reducible. A reducible is any object with a reduce method.
-  The mechanics of _how_ the reduction happens are left up to the `reduce`
-  method. */
-  return { reduce: reduce };
+function ns(key) {
+  return key + '@accumulatables';
 }
-export reducible;
+
+
+function set_(object, key, value) {
+  object[key] = value;
+  return object;
+}
+
+
+function accumulatable(accumulate) {
+  /*
+  Define a new accumulatable. A accumulatable is any object with a accumulate
+  method at the correct namespace.
+
+  The mechanics of _how_ the accumulation happens are left up to the `accumulate`
+  method. 
+
+  Accumulate methods take the same arguments as reduce, but they are not expected
+  to return a value.
+  */
+  return set_({}, ns('accumulate'), accumulate);
+}
+export accumulatable;
 
 
 function isEmpty(thing) {
@@ -50,21 +49,27 @@ function isEmpty(thing) {
 export isEmpty;
 
 
-// End is our token representing the end of reduction for a future reducible.
-// We use it to mark the end of a stream with future reducibles.
+function isAccumulatable(thing) {
+  return thing && typeof thing[ns('accumulate')] === 'function';
+}
+export isAccumulatable;
+
+
+// End is our token representing the end of reduction for a future accumulatable.
+// We use it to mark the end of a stream with future accumulatables.
 var end = "[Token for end of reduction]";
 export end;
 
 
-function enforceReducerEnd(reducer) {
+function enforceEnd(next) {
   /*
-  Transform a reducer function, handling and enforcing "end of source"
+  Transform a accumulator function, handling and enforcing "end of source"
   scenarios.
 
-  Returns a reducer function. */
+  Returns an accumulator function. */
 
   // Closure variable keeps track of whether reduction has already happened on
-  // the source that is being reduced.
+  // the source that is being accumulated.
   var isEnded = false;
 
   function nextUntilEnd(accumulated, item) {
@@ -73,12 +78,12 @@ function enforceReducerEnd(reducer) {
     if (isEnded) throw new Error('Source attempted to send item after it ended');
 
     // If item isn't end-of-source token, accumulate item with `next`.
-    // If item is end-of-source token, keep accumulated value from last reduce
+    // If item is end-of-source token, keep accumulated value from last accumulate
     // step.
-    accumulated = (item === end) ? accumulated : reducer(accumulated, item);
+    accumulated = (item === end) ? accumulated : next(accumulated, item);
 
     // If item is end token, source is ended.
-    // Likewise, if reducer passed back end token, source is ended.
+    // Likewise, if accumulator passed back end token, source is ended.
     isEnded = (item === end || accumulated === end);
 
     // Return reduction.
@@ -87,83 +92,20 @@ function enforceReducerEnd(reducer) {
 
   return nextUntilEnd;
 }
+export enforceEnd;
 
 
-function add_(arraylike, item) {
-  Array.prototype.push.call(arraylike, item);
-  return arraylike;
+function accumulate(source, next, initial) {
+  /* Any value is accumulatable with accumulate function. */
+  isAccumulatable(source) ? source[ns('accumulate')](next, initial) : next(next(initial, source), end);
 }
+export accumulate;
 
 
-/* Create a future object to be used as the prototype for future reducible
-values. */
-var __future__ = reducible(function reduceFuture(next, initial) {
-  // Uses instance to keep track of things.
-  var future = this;
-
-  // If future has been delivered, return the final reduction of the true value.
-  if (!isEmpty(future.value)) return reduce(future.value, next, initial);
-
-  // Otherwise, keep next and initial around so we can use them for the
-  // eventual reduction.
-  // @TODO wait, should I be returning a future for the reduction of the value,
-  // rather than the value? Yeah I think so.
-  return add_(future, [next, initial]);
-});
-
-
-function deliver_(future, value) {
-  /* Deliver a future, where future is any object with optional next and
-  initial properties.
-
-  Mutates the future and returns empty. */
-
-  // Assign the value to the future.
-  future.value = value;
-
-  // Kick off accumulation of the value.
-  return future.next ? reduce(value, future.next, future.initial) : future;
-}
-
-
-function futureReducible(reduce) {
-  // Create a new reducible that delivers reducible future values.
-  // It is not necessary that the reduce function return a value. A
-  // future reducible will be returned from the transformed function.
-  // Errors are used to mark the end of reduction.
-  return reducible(function reduceFutureReducible(next, initial) {
-    next = enforceReducerEnd(next);
-
-    var f = create(__future__);
-
-    function forward(accumulated, item) {
-      // If source is exausted and sends error, or reducer returns an error,
-      // deliver final accumulation. Otherwise, continue accumulation.
-      var reduction = next(accumulated, item);
-      var isEnded = item === end || reduction === end;
-      return isEnded ? deliver_(f, accumulated) :
-                       reduction;
-    }
-
-    reduce(forward, initial);
-
-    return !isEmpty(f.value) ? f.value : f;
-  });
-}
-export futureReducible;
-
-
-function reduce(source, next, initial) {
-  /* Any value is reducible with reduce function. */
-  return source && source.reduce ? source.reduce(next, initial) : next(initial, source);
-}
-export reduce;
-
-
-function reducer(xf) {
+function accumulator(xf) {
   /**
   Convenience function to simplify definitions of transformation function, to
-  avoid manual definition of `reducible` results and currying transformation
+  avoid manual definition of `accumulatable` results and currying transformation
   function.
 
   From a pure data `xf` function that is called on each value for a
@@ -174,7 +116,7 @@ function reducer(xf) {
   2. `next` - Function which needs to be invoked with transformed value,
   or simply not called to skip the value.
   3. `accumulated` - Accumulate value.
-  4. `item` - Last value emitted by a collection being reduced.
+  4. `item` - Last value emitted by a collection being accumulated.
 
   Function is supposed to return new, accumulated `result`. It may either
   pass mapped transformed `value` and `result` to the `next` continuation
@@ -185,24 +127,25 @@ function reducer(xf) {
   A riff on reducer in https://github.com/clojure/clojure/blob/master/src/clj/clojure/core/reducers.clj.
   **/
   function xformed(source, additional) {
-    // Return a new reducible object who's reduce method transforms the `next`
-    // reducing function.
-    // 
-    // `next` is the reducer function we are transforming. We are essentially
-    // wrapping it with `xf` provided the value is not an error.
-    return reducible(function reduceReducerTransform(next, initial) {
-      return reduce(source, function sourceReducer(accumulated, item) {
-        return xf(additional, next, accumulated, item);
+    // Return a new accumulatable object who's accumulate method transforms the `next`
+    // accumulating function.
+    return accumulatable(function accumulateAccumulatorTransform(next, initial) {
+      // `next` is the accumulating function we are transforming. 
+      accumulate(source, function sourceAccumulator(accumulated, item) {
+        // We are essentially wrapping next with `xf` provided the `item` is
+        // not `end`.
+        return item === end ? next(accumulated, item) :
+                              xf(additional, next, accumulated, item);
       }, initial);
     });    
   }
 
   return xformed;
 }
-export reducer;
+export accumulator;
 
 
-var map = reducer(function mapTransform(mapper, next, accumulated, item) {
+var map = accumulator(function mapTransform(mapper, next, accumulated, item) {
   /**
   Returns transformed version of given `source` where each item of it
   is mapped using `f`.
@@ -219,27 +162,26 @@ export map;
 
 
 function append(left, right) {
-  return reducible(function reduceAppend(next, initial) {
-    // @TODO looks like reduceRight is never called by futureReducible.
-    function reduceRight(_, accumulated) {
-      return reduce(right, next, accumulated);
+  return accumulatable(function accumulateAppend(next, initial) {
+    function accumulatorLeft(accumulated, item) {
+      return item === end ? accumulate(right, next, accumulated) : next(accumulated, item);
     }
 
-    var accumulated = reduce(left, next, initial);
-
-    // When accumulation of left is finished, reduce right.
-    return reduce(accumulated, reduceRight);
+    accumulate(left, accumulatorLeft, initial);
   });
 }
 export append;
 
 
-function appendReducer(a, b) {
-  return a === null ? b : append(a, b);
-}
-
-
 function concat(source) {
-  return reduce(source, appendReducer, null);
+  return accumulatable(function accumulateConcat(next, initial) {
+    function appendAccumulator(a, b) {
+      if(b === end) return accumulate(a, next, initial);
+
+      return a === null ? b : append(a, b);
+    }
+
+    accumulate(source, appendAccumulator, null);
+  });
 }
 export concat;
