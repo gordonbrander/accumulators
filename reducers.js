@@ -15,7 +15,7 @@ altogether. Only accumulate. The magic of reducers is after all async, not array
 
 
 function ns(key) {
-  return key + '@accumulatables';
+  return key + '@accumulators';
 }
 
 

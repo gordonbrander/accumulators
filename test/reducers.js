@@ -80,6 +80,19 @@ describe('map()', function () {
       return item === end ? (assert.strictEqual(accumulated, 3), done()) : accumulated + item;
     }, 0);
   });
+
+  it('should never see end tokens', function (done) {
+    var x = makeIntervalReducible([0, 0, 0, 0, 0]);
+
+    var a = map(x, function (x) {
+      assert(x !== end);
+      return 1;
+    });
+
+    accumulate(a, function(accumulated, item) {
+      return item === end ? (assert.strictEqual(accumulated, 5), done()) : accumulated + item;
+    }, 0);
+  });
 });
 
 describe('append()', function () {
