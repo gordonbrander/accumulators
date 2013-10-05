@@ -57,7 +57,7 @@ export isAccumulatable;
 
 // End is our token representing the end of reduction for a future accumulatable.
 // We use it to mark the end of a stream with future accumulatables.
-var end = "[Token for end of reduction]";
+var end = "[Token for end of accumulation]";
 export end;
 
 
