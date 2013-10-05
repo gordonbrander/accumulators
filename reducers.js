@@ -89,6 +89,12 @@ function enforceReducerEnd(reducer) {
 }
 
 
+function add_(arraylike, item) {
+  Array.prototype.push.call(arraylike, item);
+  return arraylike;
+}
+
+
 /* Create a future object to be used as the prototype for future reducible
 values. */
 var __future__ = reducible(function reduceFuture(next, initial) {
@@ -98,17 +104,11 @@ var __future__ = reducible(function reduceFuture(next, initial) {
   // If future has been delivered, return the final reduction of the true value.
   if (!isEmpty(future.value)) return reduce(future.value, next, initial);
 
-  // @TODO this is where the issue is with append(). Append requires a reducer
-  // on the future, but since the future returns itself, the reducer is stomped
-  // by the reducer interested in the future value.
-  if(future.next) throw new Error('Future was reduced twice.');
-
   // Otherwise, keep next and initial around so we can use them for the
   // eventual reduction.
-  future.next = next;
-  future.initial = initial;
-
-  return future;
+  // @TODO wait, should I be returning a future for the reduction of the value,
+  // rather than the value? Yeah I think so.
+  return add_(future, [next, initial]);
 });
 
 
