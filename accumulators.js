@@ -22,21 +22,22 @@
 var __accumulate__ = 'accumulate@accumulators';
 
 
-// Defines a new accumulatable. Am accumulatable is any object with an
+// Defines a new accumulatable. An accumulatable is any object with an
 // accumulate method at the correct namespace.
 // 
 // The mechanics of _how_ the accumulation happens are left up to the
 // `accumulate` method.
 // 
-// Accumulate methods take the same arguments as reduce, but they are not
-// expected to return a value. Because accumulate is not expected to return a
+// `accumulate` methods take the same arguments as `reduce`, but they are not
+// expected to return a value. Because `accumulate` is not expected to return a
 // value, items yielded by accumulate may come during multiple turns of the
 // event loop, allowing accumulation of async sources to happen.
-function accumulatable(accumulate) {
-  // Create new object, assign accumulate function to the accumulate field.
-  var x = {};
-  x[__accumulate__] = accumulate;
-  return x;
+function accumulatable(accumulate, o) {
+  // Use optional provided object, or create a new one.
+  o = o || {};
+  // Assign accumulate function to the accumulate field.
+  o[__accumulate__] = accumulate;
+  return o;
 }
 export accumulatable;
 
