@@ -4,18 +4,18 @@ compile_all:
 	make compile_amd
 
 compile_node:
-	compile-modules reducers.js preload.js --to node --type 'cjs'
+	compile-modules accumulators.js preload.js --to node --type 'cjs'
 
 compile_browser:
-	compile-modules reducers.js --to browser --type globals --globals reducers
+	compile-modules accumulators.js --to browser --type globals --globals reducers
 	compile-modules preload.js --to browser --type globals --globals reducers --imports reducers:reducers
 
 compile_amd:
-	compile-modules reducers.js --to amd --type 'amd'
+	compile-modules accumulators.js --to amd --type 'amd'
 
 tests:
 	make compile_node
-	mocha --ui bdd --reporter list --timeout 2000 ./test/reducers.js
+	mocha --ui bdd --reporter list --timeout 2000 ./test/accumulators.js
 
 docco:
-	docco reducers.js
+	docco accumulators.js

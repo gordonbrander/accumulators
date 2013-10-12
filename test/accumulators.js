@@ -1,4 +1,4 @@
-var r = require('../node/reducers.js');
+var r = require('../node/accumulators.js');
 var accumulatable = r.accumulatable;
 var isAccumulatable = r.isAccumulatable;
 var accumulate = r.accumulate;
