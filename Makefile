@@ -16,3 +16,6 @@ compile_amd:
 tests:
 	make compile_node
 	mocha --ui bdd --reporter list --timeout 2000 ./test/reducers.js
+
+docco:
+	docco reducers.js
