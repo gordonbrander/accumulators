@@ -78,6 +78,7 @@ function accumulate(source, next, initial) {
     source[__accumulate__](next, initial) :
     // If source has a reduce method, fall back to accumulation with reduce,
     // then call `next` with `end` token and result of reduction.
+    // Reducible sources are expected to return a value for `reduce`.
     isMethodAt(source, 'reduce') ?
       next(source.reduce(next, initial), end) :
       // Otherwise, call `next` with value of source, then `end`.
