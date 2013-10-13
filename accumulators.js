@@ -5,6 +5,8 @@
 // collection manipulation, asyncronous flow control and the ability to
 // represent infinitely large collections.
 // 
+// Copyright Gordon Brander, 2013. Released under the terms of the [MIT license](http://opensource.org/licenses/MIT).
+// 
 // Background:
 // 
 // * [Reducers - A Library and Model for Collection Processing](http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html)
@@ -20,7 +22,7 @@
 // 
 // This file is just a tiny JavaScript implementation of [Clojure Reducers](http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html).
 // 
-// Reducers are just an answer to the question: "what is the minimum necessary
+// Reducers are an answer to the question: "what is the minimum necessary
 // interface for a collection?". A collection is anything that can be
 // `reduce`d, because `reduce` can produce any other value from a collection.
 // In JS, we might say a collection is any object with a `reduce` method.
@@ -62,6 +64,8 @@
 // 
 // The base implementation: helpers for defining and
 // duck-typing accumulatables, and an `accumulate` function.
+//
+// ---
 
 // Create namespaced key.
 var __accumulate__ = 'accumulate@accumulators';
