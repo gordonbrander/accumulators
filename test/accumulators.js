@@ -48,21 +48,24 @@ describe('isAccumulatable()', function () {
   var x = accumulatable(function () {});
 
   it('should return true for accumulatable objects', makeAssertK(isAccumulatable(x)));
-  it('should return false for other values', makeAssertK(!isAccumulatable({})));
+  it('should return false for other values', makeAssertK(!isAccumulatable({}) && !isAccumulatable([])));
 });
 
-describe('accumulate() primitive', function () {
+describe('accumulate()', function () {
   it("should call next with value for accumulation of primitive values, followed by end token.", function (done) {
     accumulate(3, function assertA2(accumulated, num) {
       return num === end ? (assert.strictEqual(accumulated, 3), done()) : num;
     });
-  })
-});
+  });
 
-describe('accumulate() across multiple event loop turns', function () {
-  var x = makeIntervalReducible([0, 1, 2, 3]);
+  it("should reduce with next (followed by end token) for accumulation of values with a reduce method.", function (done) {
+    accumulate([0, 1, 2, 3], function assertA2(accumulated, item) {
+      return (item === end) ? (assert.strictEqual(accumulated, 6), done()) : accumulated + item;
+    }, 0);
+  });
 
   it('should accumulate values over multiple turns', function (done) {
+    var x = makeIntervalReducible([0, 1, 2, 3]);
     accumulate(x, function (accumulated, item) {
       return (item === end) ? (assert.strictEqual(accumulated, 6), done()) : accumulated + item;
     }, 0);
