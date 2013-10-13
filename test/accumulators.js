@@ -96,6 +96,16 @@ describe('map()', function () {
       return item === end ? (assert.strictEqual(accumulated, 5), done()) : accumulated + item;
     }, 0);
   });
+
+  it('should map reducibles, too', function (done) {
+    var a = map([0, 1, 2, 3], function (x) {
+      return x + 1;
+    });
+
+    accumulate(a, function (accumulated, item) {
+      return item === end ? (assert.strictEqual(accumulated, 10), done()) : accumulated + item;
+    }, 0);    
+  });
 });
 
 describe('append()', function () {
