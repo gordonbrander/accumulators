@@ -56,8 +56,12 @@
 // **accumulate** method, which is the same as `reduce`, but is not required to
 // return a value. If the object doesn't have an accumulate method, we fall back
 // to `reduce` (as in the case of arrays).
+
+// The basics
+// ----------
 // 
-// ---
+// The base implementation: helpers for defining and
+// duck-typing accumulatables, and an `accumulate` function.
 
 // Create namespaced key.
 var __accumulate__ = 'accumulate@accumulators';
@@ -142,6 +146,10 @@ function accumulate(source, next, initial) {
       next(next(initial, source), end);
 }
 export accumulate;
+
+
+// Transformations: map, filter, et al
+// -----------------------------------
 
 
 // Convenience function to simplify definitions of transformation function, to
