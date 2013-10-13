@@ -4,11 +4,10 @@ compile_all:
 	make compile_amd
 
 compile_node:
-	compile-modules accumulators.js preload.js --to node --type 'cjs'
+	compile-modules accumulators.js --to node --type cjs
 
 compile_browser:
 	compile-modules accumulators.js --to browser --type globals --globals reducers
-	compile-modules preload.js --to browser --type globals --globals reducers --imports reducers:reducers
 
 compile_amd:
 	compile-modules accumulators.js --to amd --type 'amd'
@@ -19,3 +18,7 @@ tests:
 
 docco:
 	docco accumulators.js
+
+uglify:
+	make compile_browser
+	uglifyjs browser/accumulators.js --compress --mangle --output browser/accumulators.min.js
