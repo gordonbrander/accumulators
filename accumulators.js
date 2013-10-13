@@ -1,9 +1,9 @@
 // Accumulators
 // =============================================================================
 // 
-// A tiny library that offers blazing fast generic collection manipulation,
-// asyncronous flow control and infinitely large streams through transformation
-// of reducing functions.
+// A tiny library for reactive programming that offers blazing fast generic
+// collection manipulation, asyncronous flow control and infinitely large
+// streams through transformation of reducing functions.
 // 
 // Background:
 // 
@@ -14,28 +14,41 @@
 // 
 // * https://github.com/Gozala/reducers/
 // * https://github.com/Gozala/reducible/
+//
+// ---
 
-
-// Create namespaced key for accumulatable objects.
-// This namespaced key has the specific meaning of being accumulatable with
-// accumulate function.
+// Create namespaced key.
 var __accumulate__ = 'accumulate@accumulators';
 
-
-// Defines a new accumulatable. An accumulatable is any object with an
-// accumulate method at the correct namespace.
+// An `accumulatable` is any object with an accumulate method at the namespaced key.
+// Creates a new accumulatable source by assigning the `accumulate` method to
+// the correct namespaced key on an object.
 // 
 // The mechanics of _how_ the accumulation happens are left up to the
 // `accumulate` method.
 // 
-// `accumulate` methods take the same arguments as `reduce`, but they are not
-// expected to return a value. Because `accumulate` is not expected to return a
-// value, items yielded by accumulate may come during multiple turns of the
-// event loop, allowing accumulation of async sources to happen.
+// `accumulate` takes the same arguments as `reduce` method, but it is not
+// expected to return a value.
+// 
+//     function accumulate(next, initial) { ... }
+//
+// ...where `next` is a reducer function -- a function with shape:
+// 
+//     function next(accumulated, item) { ... }
+// 
+// Accumulatable sources are just a series of calls to `next` within
+// `accumulate` method.
+// 
+// Because `accumulate` is not expected to return a value, calls to `next` by
+// accumulate may happen over multiple turns of the event loop, allowing
+// accumulation of async sources to happen.
+// 
+// Since accumulate does not return a value, we use a special `end` token to
+// denote the end of a sequence (see below).
 function accumulatable(accumulate, o) {
   // Use optional provided object, or create a new one.
   o = o || {};
-  // Assign accumulate function to the accumulate field.
+  // Assign accumulate function to the namespaced accumulate field.
   o[__accumulate__] = accumulate;
   return o;
 }
@@ -51,18 +64,19 @@ export isMethodAt;
 
 
 // Check if a thing is accumulatable. Returns boolean.
-// Convenience wrapper for isMethodAt.
+// Convenience wrapper for `isMethodAt()`.
 function isAccumulatable(thing) {
   return isMethodAt(thing, __accumulate__);
 }
 export isAccumulatable;
 
 
-// End is our token representing the end of reduction for a future accumulatable.
-// We use it to mark the end of a stream with future accumulatables.
-// @TODO perhaps it would make sense to do accumulation CPS instead of with an
-// end token. However, this would make falling back to `reduce` harder.
-var end = "[Token for end of accumulation]";
+// End is our token that represents the end of an accumulatable source.
+// `accumulatable`s can pass this token as the last item to denote they are
+// finished sending values. Accumulating `next` functions may also return `end`
+// to denote they are finished consuming, and that no further values should
+// be sent.
+var end = "Token for end of accumulation @accumulators";
 export end;
 
 
@@ -82,7 +96,7 @@ function accumulate(source, next, initial) {
     // Reducible sources are expected to return a value for `reduce`.
     isMethodAt(source, 'reduce') ?
       next(source.reduce(next, initial), end) :
-      // Otherwise, call `next` with value of source, then `end`.
+      // Otherwise, call `next` with value, then `end`.
       next(next(initial, source), end);
 }
 export accumulate;
