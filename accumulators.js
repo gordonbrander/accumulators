@@ -304,12 +304,12 @@ function merge(source) {
     }
 
     accumulate(source, function accumuateMergeSource(_, nested) {
-      // If there is an error or end of `source` collection just pass it
-      // to `forward` it will take care of detecting weather it's error
-      // or `end`. In later case it will also figure out if it's `end` of
-      // result to and act appropriately.
-      if (nested === end) return forward(_, end);
-      // If `nested` item is not end, accumulate it via `forward`.
+      // If we have reached the end of the sources, pass end token
+      // to `forward`.
+      if (nested === end) return forward(null, end);
+
+      // If `nested` item is not end, accumulate it via `forward` and record
+      // that we have opened another source.
       open = open + 1;
       accumulate(nested, forward, null);
     }, null);
