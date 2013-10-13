@@ -2,19 +2,60 @@
 // =============================================================================
 // 
 // A tiny library for reactive programming that offers blazing fast generic
-// collection manipulation, asyncronous flow control and infinitely large
-// streams through transformation of reducing functions.
+// collection manipulation, asyncronous flow control and the ability to
+// represent infinitely large collections.
 // 
 // Background:
 // 
-// * http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html
-// * http://clojure.com/blog/2012/05/15/anatomy-of-reducer.html
+// * [Reducers - A Library and Model for Collection Processing](http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html)
+// * [Anatomy of a Reducer](http://clojure.com/blog/2012/05/15/anatomy-of-reducer.html)
 // 
 // Prior art:
 // 
 // * https://github.com/Gozala/reducers/
 // * https://github.com/Gozala/reducible/
+// 
+// What & How
+// ----------
+// 
+// This file is just a tiny JavaScript implementation of [Clojure Reducers](http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html).
+// 
+// Beginning at the beginning, reducers are just an answer to the question "what
+// is the minimum interface necessary for a collection?". Answer: a collection
+// is anything that can be `reduce`d, because `reduce` can produce any other
+// value from a collection. In JS, we might say a collection is any object with
+// a `reduce` method. This simple idea has **amazing** consequences...
+// 
+// With such a small interface, custom collection types can be created simply by
+// defining a method called `reduce` that describes how to step through the
+// collection and accumulate a value. Want to mix a typed array and a linked
+// list? No problem. Simply define a `reduce` for each and mix away.
+// 
+// What about `map`, `filter`, `concat` and friends? We can define them
+// as function transformations of the reducing function. `map`, `filter`, et al
+// will actually return a transformed function instead of an array. The work is
+// done when we pass the resulting function to `reduce`. This has an awesome
+// side effect: large collection manipulations are fast because there is no
+// intermediate representation of the collection in memory.
+// 
+// The _reducing_ function can be called at any time by `reduce`, so if we take
+// away the requirement for `reduce` to return a value, we can even represent
+// _asyncronous_ collections.
+// 
+// Why would we want to do this?
+// 
+// * Collections with items that appear during different turns of the event
+//   loop? This lets us represent _infinitely long streams_.
+// * An async collection can be used to control a flow of events, because,
+//   after all, events are just a sequence of "things over time". So:
+//   we can program in the 4th dimension, mapping, filtering
+//   and transforming events over time.
 //
+// Pretty useful. So an accumulable is any object that implements a special
+// **accumulate** method, which is the same as reduce, but is not required to
+// return a value. If the object doesn't have an accumulate method, we fall back to
+// `reduce` (as in the case of arrays).
+// 
 // ---
 
 // Create namespaced key.
@@ -91,8 +132,8 @@ function accumulate(source, next, initial) {
   // If source is accumulatable, call accumulate method.
   isAccumulatable(source) ?
     source[__accumulate__](next, initial) :
-    // If source has a reduce method, fall back to accumulation with reduce,
-    // then call `next` with `end` token and result of reduction.
+    // ...otherwise, if source has a reduce method, fall back to accumulation
+    // with reduce, then call `next` with `end` token and result of reduction.
     // Reducible sources are expected to return a value for `reduce`.
     isMethodAt(source, 'reduce') ?
       next(source.reduce(next, initial), end) :
@@ -146,11 +187,9 @@ export accumulator;
 // Returns transformed version of given `source` where each item of it
 // is mapped using `f`.
 // 
-// Example:
-// 
 //     var data = [{ name: "foo" }, { name: "bar" }]
 //     var names = map(data, function(item) { return item.name })
-//     => < "foo" "bar" >
+//     // <"foo", "bar">
 var map = accumulator(function mapTransform(mapper, next, accumulated, item) {
   return next(accumulated, mapper(item));
 });
@@ -160,12 +199,10 @@ export map;
 // Composes filtered version of given `source`, such that only items contained
 // will be once on which `f(item)` was `true`.
 // 
-// Example:
-// 
 //     var digits = filter([ 10, 23, 2, 7, 17 ], function(value) {
 //       return value >= 0 && value <= 9
 //     })
-//     => < 2 7 >
+//     // <2, 7>
 var filter = accumulator(function filterTransform(predicate, next, accumulated, item) {
   return predicate(item) ? next(accumulated, item) : accumulated;
 });
@@ -214,7 +251,10 @@ export append;
 
 
 // Concatenate a 2D source of sources, returning a new accumulatable 1D source
-// with resolved items in source order.
+// where items are ordered by source order.
+// 
+//     concat([[1, 2, 3], ['a', 'b', 'c']])
+//     // <1, 2, 3, 'a', 'b', 'c'>
 function concat(source) {
   return accumulatable(function accumulateConcat(next, initial) {
     function appendAccumulator(a, b) {
@@ -230,7 +270,10 @@ export concat;
 
 
 // Merge a 2D source of sources, returning a new accumulatable 1D source,
-// where items are ordered by time.
+// where items are ordered by time. In pseudo-code:
+// 
+//     merge(<<1, 2, 3>, <'a', 'b', 'c'>>)
+//     // <1, 'a' 2, 3, 'b', 'c'>
 function merge(source) {
   return accumulatable(function accumulateMerge(next, initial) {
     var accumulated = initial;
