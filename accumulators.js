@@ -20,11 +20,11 @@
 // 
 // This file is just a tiny JavaScript implementation of [Clojure Reducers](http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html).
 // 
-// Beginning at the beginning, reducers are just an answer to the question "what
-// is the minimum interface necessary for a collection?". Answer: a collection
-// is anything that can be `reduce`d, because `reduce` can produce any other
-// value from a collection. In JS, we might say a collection is any object with
-// a `reduce` method. This simple idea has **amazing** consequences...
+// Reducers are just an answer to the question: "what is the minimum necessary
+// interface for a collection?". A collection is anything that can be
+// `reduce`d, because `reduce` can produce any other value from a collection.
+// In JS, we might say a collection is any object with a `reduce` method.
+// This simple idea has _awesome_ consequences...
 // 
 // With such a small interface, custom collection types can be created simply by
 // defining a method called `reduce` that describes how to step through the
@@ -32,29 +32,30 @@
 // list? No problem. Simply define a `reduce` for each and mix away.
 // 
 // What about `map`, `filter`, `concat` and friends? We can define them
-// as function transformations of the reducing function. `map`, `filter`, et al
+// as function transformations of the _reducer_ function (the function you
+// give to `reduce` describing the recipe for reduction). `map`, `filter`, et al
 // will actually return a transformed function instead of an array. The work is
-// done when we pass the resulting function to `reduce`. This has an awesome
-// side effect: large collection manipulations are fast because there is no
-// intermediate representation of the collection in memory.
+// done when we pass the resulting function to `reduce`. This has the happy
+// effect of making large collection manipulations very fast because no
+// intermediate representation of the collection is created in memory.
 // 
-// The _reducing_ function can be called at any time by `reduce`, so if we take
+// The _reducer_ function can be called at any time by `reduce`, so if we take
 // away the requirement for `reduce` to return a value, we can even represent
 // _asyncronous_ collections.
 // 
 // Why would we want to do this?
 // 
-// * Collections with items that appear during different turns of the event
-//   loop? This lets us represent _infinitely long streams_.
-// * An async collection can be used to control a flow of events, because,
+// * If items can appear during multiple turns of the event loop, you can
+//   represent _infinitely long streams_.
+// * An async collection can be used to control a flow of events, because
 //   after all, events are just a sequence of "things over time". So:
 //   we can program in the 4th dimension, mapping, filtering
 //   and transforming events over time.
 //
 // Pretty useful. So an accumulable is any object that implements a special
-// **accumulate** method, which is the same as reduce, but is not required to
-// return a value. If the object doesn't have an accumulate method, we fall back to
-// `reduce` (as in the case of arrays).
+// **accumulate** method, which is the same as `reduce`, but is not required to
+// return a value. If the object doesn't have an accumulate method, we fall back
+// to `reduce` (as in the case of arrays).
 // 
 // ---
 
