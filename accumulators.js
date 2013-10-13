@@ -308,16 +308,22 @@ export merge;
 // Transform a source, reducing values from the source's `item`s using `xf`, a
 // reducer function. Returns a new source containing the reductions over time.
 function reductions(source, xf, initial) {
+  var reduction = initial;
+
   // Define a `next` function for accumulation.
   function nextReduction(accumulated, item) {
+    reduction = xf(reduction, item);
+
     return item === end ?
       next(accumulated, end) :
       // If item is not `end`, pass accumulated value to next along with
       // reduction created by `xf`.
-      next(accumulated, xf(accumulated, item));
+      next(accumulated, reduction);
   }
 
   return accumulatable(function accumulateReductions(next, initial) {
     accumulate(source, nextReduction, initial);
   });
 }
+export reductions;
+
