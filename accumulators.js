@@ -339,4 +339,3 @@ function reductions(source, xf, initial) {
   });
 }
 export reductions;
-
