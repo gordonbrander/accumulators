@@ -222,33 +222,47 @@ var filter = accumulator(function filterTransform(predicate, next, accumulated, 
 export filter;
 
 
-// Transform an accumulator function, handling and enforcing "end of source"
-// scenarios. Returns an accumulator function.
-function enforceEnd(next) {
+// Transform an accumulate function, handling and enforcing "end of source"
+// scenarios so it may only be accumulated once. This is useful for defining
+// sources that don't have in-memory representation of their complete source
+// (e.g. event emitters, infinite collections) and so can not "rewind" to
+// accumulate from the beginning. Example:
+// 
+//     accumulatable(accumulatesOnce(function (next, initial) { ... }))
+// 
+// Returns an accumulate function.
+function accumulatesOnce(accumulate) {
   // Closure variable keeps track of whether source has already ended.
   var isEnded = false;
 
-  function nextUntilEnd(accumulated, item) {
-    // After a source has been ended, it should not send further items. Throw an
-    // exception if further items are sent.
-    if (isEnded) throw new Error('Source attempted to send item after it ended');
+  function accumulateOnce(next, initial) {
+    function nextUntilEnd(accumulated, item) {
+      // After a source has been ended, it should not send further items. Throw
+      // an exception if further items are sent.
+      if (isEnded) throw new Error('Source attempted to send item after it ended');
 
-    // If item isn't end-of-source token, accumulate item with `next`.
-    // If item is end-of-source token, keep accumulated value from last accumulate
-    // step.
-    accumulated = (item === end) ? accumulated : next(accumulated, item);
+      // If item isn't end-of-source token, accumulate item with `next`.
+      // If item is end-of-source token, keep accumulated value from last
+      // accumulate step.
+      accumulated = (item === end) ? accumulated : next(accumulated, item);
 
-    // If item is end token, source is ended.
-    // Likewise, if accumulator passed back end token, source is ended.
-    isEnded = (item === end || accumulated === end);
+      // If item is end token, source is ended.
+      // Likewise, if accumulator passed back end token, source is ended.
+      isEnded = (item === end || accumulated === end);
 
-    // Return reduction.
-    return accumulated;
+      // Return reduction.
+      return accumulated;
+    }
+
+    // If accumulation for this source was already ended, throw an exception.
+    if(isEnded) throw new Error('Accumulation attempted after source was ended');
+
+    // Otherwise accumulate until `end`!
+    accumulate(nextUntilEnd, initial);
   }
 
-  return nextUntilEnd;
+  return accumulateEndable;
 }
-export enforceEnd;
 
 
 function append(left, right) {
