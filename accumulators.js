@@ -244,10 +244,7 @@ function accumulatesOnce(accumulate) {
       if (isEnded)
         throw new Error('Source attempted to send item after it ended');
 
-      // If item isn't end-of-source token, accumulate item with `next`.
-      // If item is end-of-source token, keep accumulated value from last
-      // accumulate step.
-      accumulated = (item === end) ? accumulated : next(accumulated, item);
+      accumulated = next(accumulated, item);
 
       // If item is end token, source is ended.
       // Likewise, if accumulator passed back end token, source is ended.
@@ -257,10 +254,9 @@ function accumulatesOnce(accumulate) {
       return accumulated;
     }
 
-    // If accumulation for this source was already ended or is in-progress,
+    // If accumulation for this source has already been kicked off,
     // throw an exception.
-    if(isEnded || isAccumulating)
-      throw new Error('Accumulation attempted more than once');
+    if(isAccumulating) throw new Error('Accumulation attempted more than once');
 
     // Mark accumulation in-progress.
     isAccumulating = true;
@@ -269,8 +265,9 @@ function accumulatesOnce(accumulate) {
     accumulate(nextUntilEnd, initial);
   }
 
-  return accumulateEndable;
+  return accumulateOnce;
 }
+export accumulatesOnce;
 
 
 function append(left, right) {

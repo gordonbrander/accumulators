@@ -6,6 +6,7 @@ var map = r.map;
 var end = r.end;
 var append = r.append;
 var concat = r.concat;
+var accumulatesOnce = r.accumulatesOnce;
 
 var assert = require("assert");
 
@@ -25,10 +26,10 @@ function makeAssertK(value) {
   }
 }
 
-function makeIntervalReducible(array, interval) {
+function makeAccumulatableAtInterval(array, interval) {
   array = array.slice();
 
-  return accumulatable(function (next, initial) {
+  return accumulatable(accumulatesOnce(function (next, initial) {
     var accumulated = initial;
     var id;
 
@@ -41,7 +42,7 @@ function makeIntervalReducible(array, interval) {
         accumulated = next(accumulated, array.shift());
       }
     }, interval || 10);
-  });
+  }));
 }
 
 describe('isAccumulatable()', function () {
@@ -65,7 +66,7 @@ describe('accumulate()', function () {
   });
 
   it('should accumulate values over multiple turns', function (done) {
-    var x = makeIntervalReducible([0, 1, 2, 3]);
+    var x = makeAccumulatableAtInterval([0, 1, 2, 3]);
     accumulate(x, function (accumulated, item) {
       return (item === end) ? (assert.strictEqual(accumulated, 6), done()) : accumulated + item;
     }, 0);
@@ -73,7 +74,7 @@ describe('accumulate()', function () {
 });
 
 describe('map()', function () {
-  var x = makeIntervalReducible([0, 0, 0]);
+  var x = makeAccumulatableAtInterval([0, 0, 0]);
   var a = map(x, function () { return 1; });
 
   it('should return an accumulatable object', makeAssertK(isAccumulatable(a)));
@@ -85,7 +86,7 @@ describe('map()', function () {
   });
 
   it('should never see end tokens', function (done) {
-    var x = makeIntervalReducible([0, 0, 0, 0, 0]);
+    var x = makeAccumulatableAtInterval([0, 0, 0, 0, 0]);
 
     var a = map(x, function (x) {
       assert(x !== end);
@@ -109,8 +110,8 @@ describe('map()', function () {
 });
 
 describe('append()', function () {
-  var a = makeIntervalReducible([0, 1, 2]);
-  var b = makeIntervalReducible([3, 4, 5]);
+  var a = makeAccumulatableAtInterval([0, 1, 2]);
+  var b = makeAccumulatableAtInterval([3, 4, 5]);
 
   var c = append(a, b);
 
@@ -131,9 +132,9 @@ describe('append()', function () {
 });
 
 describe('concat()', function () {
-  var a = makeIntervalReducible([0, 1, 2]);
-  var b = makeIntervalReducible([3, 4, 5]);
-  var c = makeIntervalReducible([a, b]);
+  var a = makeAccumulatableAtInterval([0, 1, 2]);
+  var b = makeAccumulatableAtInterval([3, 4, 5]);
+  var c = makeAccumulatableAtInterval([a, b]);
 
   var d = concat(c);
 
