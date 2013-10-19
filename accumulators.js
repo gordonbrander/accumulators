@@ -232,8 +232,10 @@ export filter;
 // 
 // Returns an accumulate function.
 function accumulatesOnce(accumulate) {
-  // Closure variable keeps track of whether source has already ended.
+  // Closure variables keeps track of whether source has already ended or
+  // is in the process of being accumulated.
   var isEnded = false;
+  var isAccumulating = false;
 
   function accumulateOnce(next, initial) {
     function nextUntilEnd(accumulated, item) {
@@ -254,8 +256,13 @@ function accumulatesOnce(accumulate) {
       return accumulated;
     }
 
-    // If accumulation for this source was already ended, throw an exception.
-    if(isEnded) throw new Error('Accumulation attempted after source was ended');
+    // If accumulation for this source was already ended or is in-progress,
+    // throw an exception.
+    if(isEnded || isAccumulating)
+      throw new Error('Accumulation attempted after source was ended');
+
+    // Mark accumulation in-progress.
+    isAccumulating = true;
 
     // Otherwise accumulate until `end`!
     accumulate(nextUntilEnd, initial);
