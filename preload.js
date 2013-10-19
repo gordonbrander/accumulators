@@ -1,19 +1,15 @@
-import { reducible, map } from "reducers";
+import { accumulatable, accumulatesOnce, end } from "accumulators";
 
 function preload(src) {
-  return reducible(function preloadReduce(next, initial) {
+  return accumulatable(accumulatesOnce(function preloadAccumulate(next, initial) {
     function handler(event) {
-      next(next(initial, event), new Error("Image loaded."));
+      next(next(initial, event), end);
     }
 
     var img = new Image();
     img.onload = handler;
     img.src = src;
-  });
+  }));
 }
 export preload;
 
-function preloadAll(srcs) {
-  return map(srcs, preload);
-}
-export preloadAll;
