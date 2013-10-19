@@ -153,3 +153,17 @@ describe('concat()', function () {
     }, 0);
   });
 });
+
+describe('accumulatesOnce() transformed accumulate()', function () {
+  // makeAccumulatableAtInterval is transformed with accumulatesOnce().
+  var a = makeAccumulatableAtInterval([0, 1, 2]);
+
+  it('should throw an exception when accumulated multiple times', function () {
+    function naught() {}
+
+    assert.throws(function () {
+      accumulate(a, naught);
+      accumulate(a, naught);
+    }, Error);
+  });
+});
