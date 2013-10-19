@@ -241,7 +241,8 @@ function accumulatesOnce(accumulate) {
     function nextUntilEnd(accumulated, item) {
       // After a source has been ended, it should not send further items. Throw
       // an exception if further items are sent.
-      if (isEnded) throw new Error('Source attempted to send item after it ended');
+      if (isEnded)
+        throw new Error('Source attempted to send item after it ended');
 
       // If item isn't end-of-source token, accumulate item with `next`.
       // If item is end-of-source token, keep accumulated value from last
@@ -259,7 +260,7 @@ function accumulatesOnce(accumulate) {
     // If accumulation for this source was already ended or is in-progress,
     // throw an exception.
     if(isEnded || isAccumulating)
-      throw new Error('Accumulation attempted after source was ended');
+      throw new Error('Accumulation attempted more than once');
 
     // Mark accumulation in-progress.
     isAccumulating = true;
