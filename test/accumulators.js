@@ -6,7 +6,7 @@ var map = r.map;
 var end = r.end;
 var append = r.append;
 var concat = r.concat;
-var accumulatesOnce = r.accumulatesOnce;
+var hub = r.hub;
 
 var assert = require("assert");
 
@@ -29,7 +29,7 @@ function makeAssertK(value) {
 function makeAccumulatableAtInterval(array, interval) {
   array = array.slice();
 
-  return accumulatable(accumulatesOnce(function (next, initial) {
+  return hub(accumulatable(function (next, initial) {
     var accumulated = initial;
     var id;
 
@@ -154,16 +154,8 @@ describe('concat()', function () {
   });
 });
 
-describe('accumulatesOnce() transformed accumulate()', function () {
-  // makeAccumulatableAtInterval is transformed with accumulatesOnce().
-  var a = makeAccumulatableAtInterval([0, 1, 2]);
-
-  it('should throw an exception when accumulated multiple times', function () {
-    function naught() {}
-
-    assert.throws(function () {
-      accumulate(a, naught);
-      accumulate(a, naught);
-    }, Error);
+describe('hub() transformed accumulateable()', function () {
+  it('should allow accumulation from multiple consumers', function () {
+    throw Error('@TODO');
   });
 });

@@ -222,52 +222,50 @@ var filter = accumulator(function filterTransform(predicate, next, accumulated, 
 export filter;
 
 
-// Transform an accumulate function, handling and enforcing "end of source"
-// scenarios so it may only be accumulated once. This is useful for defining
-// sources that don't have in-memory representation of their complete source
-// (e.g. event emitters, infinite collections) and so can not "rewind" to
-// accumulate from the beginning. Example:
-// 
-//     accumulatable(accumulatesOnce(function (next, initial) { ... }))
-// 
-// Returns an accumulate function.
-function accumulatesOnce(accumulate) {
-  // Closure variables keeps track of whether source has already ended or
-  // is in the process of being accumulated.
-  var isEnded = false;
-  var isAccumulating = false;
+// Create namespaced key.
+var __open__ = 'isOpen@accumulators';
 
-  function accumulateOnce(next, initial) {
-    function nextUntilEnd(accumulated, item) {
-      // After a source has been ended, it should not send further items. Throw
-      // an exception if further items are sent.
-      if (isEnded)
-        throw new Error('Source attempted to send item after it ended');
 
-      accumulated = next(accumulated, item);
-
-      // If item is end token, source is ended.
-      // Likewise, if accumulator passed back end token, source is ended.
-      isEnded = (item === end || accumulated === end);
-
-      // Return reduction.
-      return accumulated;
-    }
-
-    // If accumulation for this source has already been kicked off,
-    // throw an exception.
-    if(isAccumulating) throw new Error('Accumulation attempted more than once');
-
-    // Mark accumulation in-progress.
-    isAccumulating = true;
-
-    // Otherwise accumulate until `end`!
-    accumulate(nextUntilEnd, initial);
-  }
-
-  return accumulateOnce;
+// Internal helper function that mutates a consumer object.
+// Used in `hub()` (see below).
+function dispatchToConsumer_(item, consumer) {
+  consumer.accumulated = consumer.next(consumer.accumulated, item);
+  return item;
 }
-export accumulatesOnce;
+
+
+// Some sources, like event streams, can only be accumulated once. Events in
+// the source happen, but no reference is kept in memory by the source. `hub()`
+// allows you to transform a source of this type so it can be accumulated
+// multiple times.
+// 
+//     hub(accumulatable(function (next, initial) { ... }))
+function hub(source) {
+  return accumulatable(function accumulateHub(next, initial) {
+    // Note that hub (`this`) is an array. This means `accumulateHub()` is a
+    // proper method of `hub`.
+    var hub = this;
+
+    // Add consumer to hub.
+    hub.push({ next: next, accumulated: initial });
+
+    // If hub is already open, we don't need to reopen it.
+    if (hub[__open__]) return;
+
+    // Mark hub open.
+    hub[__open__] = true;
+
+    // Begin accumulation of source.
+    accumulate(source, function (_, item) {
+      // When item comes from source, dispatch it to all consumers.
+      hub.reduce(dispatchToConsumer_, item);
+
+      // If item is end token, remove all consumers from hub. We're done.
+      if (item === end) hub.splice(0, hub.length);
+    });
+  }, []);
+}
+export hub;
 
 
 function append(left, right) {
