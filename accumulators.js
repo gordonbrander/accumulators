@@ -438,7 +438,7 @@ export frames;
 // Open a source representing events over time on an element.
 // Returns an accumulatable of events.
 function on(element, event) {
-  return accumulatable(hub(function accumulateEventListener(next, initial) {
+  return hub(accumulatable(function accumulateEventListener(next, initial) {
     var accumulated = initial;
 
     function listener(event) {
