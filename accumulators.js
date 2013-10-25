@@ -340,18 +340,18 @@ export merge;
 function reductions(source, xf, initial) {
   var reduction = initial;
 
-  // Define a `next` function for accumulation.
-  function nextReduction(accumulated, item) {
-    reduction = xf(reduction, item);
-
-    return item === end ?
-      next(accumulated, end) :
-      // If item is not `end`, pass accumulated value to next along with
-      // reduction created by `xf`.
-      next(accumulated, reduction);
-  }
-
   return accumulatable(function accumulateReductions(next, initial) {
+    // Define a `next` function for accumulation.
+    function nextReduction(accumulated, item) {
+      reduction = xf(reduction, item);
+
+      return item === end ?
+        next(accumulated, end) :
+        // If item is not `end`, pass accumulated value to next along with
+        // reduction created by `xf`.
+        next(accumulated, reduction);
+    }
+
     accumulate(source, nextReduction, initial);
   });
 }
