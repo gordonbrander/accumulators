@@ -364,6 +364,10 @@ function add_(pushable, item) {
 }
 
 
+// Helpers: DOM event streams, timing functions, etc
+// -------------------------------------------------
+
+
 // Throttle source, making sure it only yields a value once every x ms.
 // Returns an accumulatable.
 function throttle(source, ms) {
@@ -398,3 +402,20 @@ function throttle(source, ms) {
   });
 }
 export throttle;
+
+
+// Open a source representing events over time on an element.
+// Returns an accumulatable of events.
+function on(element, event) {
+  return accumulatable(accumulatesOnce(function accumulateEventListener(next, initial) {
+    var accumulated = initial;
+
+    function listener(event) {
+      accumulated = next(accumulated, event);
+      if(accumulated === end) element.removeEventListener(listener);
+    }
+
+    element.addEventListener(listener);
+  }));
+}
+export on;
