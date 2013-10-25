@@ -358,14 +358,14 @@ function reductions(source, xf, initial) {
 export reductions;
 
 
+// Helpers: DOM event streams, timing functions, etc
+// -------------------------------------------------
+
+
 function add_(pushable, item) {
   pushable.push(item);
   return pushable;
 }
-
-
-// Helpers: DOM event streams, timing functions, etc
-// -------------------------------------------------
 
 
 // Throttle source, making sure it only yields a value once every x ms.
@@ -402,6 +402,37 @@ function throttle(source, ms) {
   });
 }
 export throttle;
+
+
+// Use any available requestAnimationFrame.
+var requestAnimationFrame = window.requestAnimationFrame ||
+                            window.mozRequestAnimationFrame ||
+                            window.webkitRequestAnimationFrame ||
+                            window.msRequestAnimationFrame;
+
+// Get a stream of frames over time.
+// Returns an accumulatable for a stream of animation frames over time.
+// Each frame is represented by a framecount.
+function frames(ms) {
+  return accumulatable(function accumulateFrames(next, initial) {
+    var accumulated = initial;
+    var start = Date.now();
+
+    function onFrame() {
+      var now = Date.now();
+
+      accumulated = next(accumulated, now);
+
+      // If we have reached the ms count for frames, end the source.
+      if (ms && (now - start) === ms) return next(accumulated, end);
+      // If consumer ends source, stop requesting frames.
+      if (accumulated !== end) return requestAnimationFrame(onFrame);
+    }
+
+    requestAnimationFrame(onFrame);
+  });
+}
+export frames;
 
 
 // Open a source representing events over time on an element.
