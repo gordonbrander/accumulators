@@ -446,7 +446,7 @@ function on(element, event) {
       if(accumulated === end) element.removeEventListener(listener);
     }
 
-    element.addEventListener(listener);
+    element.addEventListener(event, listener);
   }));
 }
 export on;
