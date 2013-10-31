@@ -441,13 +441,11 @@ function frames(ms) {
     var accumulated = initial;
     var start = Date.now();
 
-    function onFrame() {
-      var now = Date.now();
-
+    function onFrame(now) {
       accumulated = next(accumulated, now);
 
       // If we have reached the ms count for frames, end the source.
-      if (ms && (now - start) === ms) return next(accumulated, end);
+      if (ms && ((now - start) >= ms)) return next(accumulated, end);
       // If consumer ends source, stop requesting frames.
       if (accumulated !== end) return requestAnimationFrame(onFrame);
     }
