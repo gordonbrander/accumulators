@@ -449,7 +449,7 @@ function sample(source, triggers, assemble) {
 
     function nextSource(_, item) {
       // Assign most recent item to closure variable.
-      sampled = item;
+      if(item !== end) sampled = item;
     }
 
     function nextTrigger(accumulated, item) {
