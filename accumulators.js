@@ -381,10 +381,6 @@ function reductions(source, xf, initial) {
 export reductions;
 
 
-// Helpers: DOM event streams, timing functions, etc
-// -------------------------------------------------
-
-
 function add_(pushable, item) {
   pushable.push(item);
   return pushable;
@@ -425,6 +421,10 @@ function throttle(source, ms) {
   });
 }
 export throttle;
+
+
+// Browser helpers: animation, DOM events, etc
+// -------------------------------------------
 
 
 // A wrapper for [requestAnimationFrame][raf], patching up browser support and
