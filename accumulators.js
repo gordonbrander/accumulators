@@ -222,8 +222,9 @@ var filter = accumulator(function filterTransform(predicate, next, accumulated, 
 export filter;
 
 
-// Create namespaced key.
+// Create namespaced keys.
 var __open__ = 'isOpen@accumulators';
+var __consumers__ = 'consumers@accumulators';
 
 
 // Internal helper function that mutates a consumer object.
@@ -240,14 +241,23 @@ function dispatchToConsumer_(item, consumer) {
 // multiple times.
 // 
 //     hub(accumulatable(function (next, initial) { ... }))
+// 
+// @TODO close source if all consumers pass back `end`. Nice to have. Probably
+// not crucial for most use cases.
 function hub(source) {
+  // Create hub object.
+  var h = {};
+  // Create array to keep track of consumers.
+  h[__consumers__] = [];
+
   return accumulatable(function accumulateHub(next, initial) {
     // Note that hub (`this`) is an array. This means `accumulateHub()` is a
     // proper method of `hub`.
     var hub = this;
+    var consumers = hub[__consumers__];
 
     // Add consumer to hub.
-    hub.push({ next: next, accumulated: initial });
+    consumers.push({ next: next, accumulated: initial });
 
     // If hub is already open, we don't need to reopen it.
     if (hub[__open__]) return;
@@ -255,15 +265,17 @@ function hub(source) {
     // Mark hub open.
     hub[__open__] = true;
 
-    // Begin accumulation of source.
-    accumulate(source, function (_, item) {
+    function nextDispatch(_, item) {
       // When item comes from source, dispatch it to all consumers.
-      hub.reduce(dispatchToConsumer_, item);
+      consumers.reduce(dispatchToConsumer_, item);
 
-      // If item is end token, remove all consumers from hub. We're done.
-      if (item === end) hub.splice(0, hub.length);
-    });
-  }, []);
+      // If item is end token, empty all consumers from array. We're done.
+      if (item === end) consumers.splice(0, consumers.length);
+    }
+
+    // Begin accumulation of source.
+    accumulate(source, nextDispatch);
+  }, h);
 }
 export hub;
 
@@ -436,8 +448,10 @@ export frames;
 
 
 // Open a source representing events over time on an element.
-// Returns an accumulatable of events.
+// Returns an accumulatable source.
 function on(element, event) {
+  // Since we want to avoid opening up multiple event listeners on the element,
+  // we use `hub()` to allow for multiple reductions of one source.
   return hub(accumulatable(function accumulateEventListener(next, initial) {
     var accumulated = initial;
 
