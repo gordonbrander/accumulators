@@ -462,6 +462,7 @@ function sample(source, triggers, assemble) {
     accumulate(triggers, nextTrigger, initial);
   });
 }
+export sample;
 
 
 // Browser helpers: animation, DOM events, etc
