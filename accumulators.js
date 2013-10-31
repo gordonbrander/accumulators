@@ -343,7 +343,7 @@ function merge(source) {
       return accumulated;
     }
 
-    accumulate(source, function accumuateMergeSource(_, nested) {
+    accumulate(source, function accumulateMergeSource(_, nested) {
       // If we have reached the end of the sources, pass end token
       // to `forward`.
       if (nested === end) return forward(null, end);
@@ -421,6 +421,47 @@ function throttle(source, ms) {
   });
 }
 export throttle;
+
+
+// Given any `thing`, returns `thing`. Useful for fallback.
+function id(thing) {
+  return thing;
+}
+
+
+// Sample an item from `source` every time an item appears in `triggers` source
+// where `source` and `triggers` are both accumulatables. For example, sampling
+// mouse move events that coencide with click events looks like this:
+// 
+//     sample(on(el, 'mousemove'), on(el, 'click'))
+// 
+// Probably only useful for sources where items appear over multiple turns
+// of the event loop.
+function sample(source, triggers, assemble) {
+  return accumulatable(function accumulateSamples(next, initial) {
+    // Assemble is a function that will be called with sample and trigger item.
+    // You may specify a sample function. If you don't it will fall back to `id`
+    // which will return the value of the sampled item.
+    assemble = assemble || id;
+
+    // Create closure variable to keep most recent sample.
+    var sampled;
+
+    function nextSource(_, item) {
+      // Assign most recent item to closure variable.
+      sampled = item;
+    }
+
+    function nextTrigger(accumulated, item) {
+      // Assemble sampled value with item and accumulate with `next()`.
+      return next(accumulated, assemble(sampled, item));
+    }
+
+    // Begin accumulation of both sources.
+    accumulate(source, nextSource);
+    accumulate(triggers, nextTrigger, initial);
+  });
+}
 
 
 // Browser helpers: animation, DOM events, etc
