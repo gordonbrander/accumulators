@@ -43,7 +43,8 @@
 // 
 // The _reducer_ function can be called at any time by `reduce`, so if we take
 // away the requirement for `reduce` to return a value, we can even represent
-// _asyncronous_ collections.
+// _asyncronous_ collections. In this library, we call a `reduce` that returns
+// no value `accumulate`.
 // 
 // Why would we want to do this?
 // 
@@ -55,9 +56,9 @@
 //   and transforming events over time.
 //
 // Pretty useful. So an accumulable is any object that implements a special
-// **accumulate** method, which is the same as `reduce`, but is not required to
-// return a value. If the object doesn't have an accumulate method, we fall back
-// to `reduce` (as in the case of arrays).
+// `accumulate()` method, which is the same as `reduce()`, but is not required
+// to return a value. If the object doesn't have an accumulate method, we fall
+// back to `reduce` (e.g. arrays).
 
 // The basics
 // ----------
@@ -67,8 +68,15 @@
 //
 // ---
 
-// Create namespaced key.
-var __accumulate__ = 'accumulate@accumulators';
+// Namespace a string. Used for creating namespaced object keys that are
+// unlikely to collide. Contract: returned key should always be the same given
+// the same string.
+function ns(string) {
+  return string + '@accumulators';
+}
+
+// Create namespaced key for accumulate method.
+var __accumulate__ = ns('accumulate');
 
 // An `accumulatable` is any object with an accumulate method at the namespaced key.
 // Creates a new accumulatable source by assigning the `accumulate` method to
@@ -126,7 +134,7 @@ export isAccumulatable;
 // finished sending values. Accumulating `next` functions may also return `end`
 // to denote they are finished consuming, and that no further values should
 // be sent.
-var end = "Token for end of accumulation @accumulators";
+var end = ns('Token for end of accumulation');
 export end;
 
 
@@ -223,8 +231,8 @@ export filter;
 
 
 // Create namespaced keys.
-var __open__ = 'isOpen@accumulators';
-var __consumers__ = 'consumers@accumulators';
+var __isOpen__ = ns('isOpen');
+var __consumers__ = ns('consumers');
 
 
 // Internal helper function that mutates a consumer object.
@@ -238,7 +246,8 @@ function dispatchToConsumer_(item, consumer) {
 // Some sources, like event streams, can only be accumulated once. Events in
 // the source happen, but no reference is kept in memory by the source. `hub()`
 // allows you to transform a source of this type so it can be accumulated
-// multiple times.
+// multiple times. It does this by keeping a list of consumers and dispatching
+// items in source to each of them. Usage:
 // 
 //     hub(accumulatable(function (next, initial) { ... }))
 // 
@@ -260,10 +269,10 @@ function hub(source) {
     consumers.push({ next: next, accumulated: initial });
 
     // If hub is already open, we don't need to reopen it.
-    if (hub[__open__]) return;
+    if (hub[__isOpen__]) return;
 
     // Mark hub open.
-    hub[__open__] = true;
+    hub[__isOpen__] = true;
 
     function nextDispatch(_, item) {
       // When item comes from source, dispatch it to all consumers.
@@ -280,6 +289,8 @@ function hub(source) {
 export hub;
 
 
+// Given 2 sources, `left` and `right`, return a new accumulatable which will
+// first accumulate `left`, then `right`. Used by `concat`.
 function append(left, right) {
   return accumulatable(function accumulateAppend(next, initial) {
     function accumulatorLeft(accumulated, item) {
