@@ -427,13 +427,20 @@ function throttle(source, ms) {
 export throttle;
 
 
-// Use any available requestAnimationFrame.
-var requestAnimationFrame = window.requestAnimationFrame ||
-                            window.mozRequestAnimationFrame ||
-                            window.webkitRequestAnimationFrame ||
-                            window.msRequestAnimationFrame;
+// A wrapper for [requestAnimationFrame][raf], patching up browser support and
+// preventing exceptions in non-browser environments (node).
+// 
+// [raf]: https://developer.mozilla.org/en-US/docs/Web/API/window.requestAnimationFrame
+function requestAnimationFrame(callback) {
+  // Use any available requestAnimationFrame.
+  return (window.requestAnimationFrame ||
+          window.mozRequestAnimationFrame ||
+          window.webkitRequestAnimationFrame ||
+          window.msRequestAnimationFrame)(callback);
+}
 
-// Get a stream of frames over time.
+
+// Get a stream of animation frames over time.
 // Returns an accumulatable for a stream of animation frames over time.
 // Each frame is represented by a framecount.
 function frames(ms) {
