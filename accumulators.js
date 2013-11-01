@@ -264,8 +264,6 @@ function hub(source) {
   h[__consumers__] = [];
 
   return accumulatable(function accumulateHub(next, initial) {
-    // Note that hub (`this`) is an array. This means `accumulateHub()` is a
-    // proper method of `hub`.
     var hub = this;
     var consumers = hub[__consumers__];
 
