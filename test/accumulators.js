@@ -7,6 +7,7 @@ var end = r.end;
 var append = r.append;
 var concat = r.concat;
 var hub = r.hub;
+var reductions = r.reductions;
 
 var assert = require("assert");
 
@@ -151,6 +152,25 @@ describe('concat()', function () {
       assert.strictEqual(accumulated, item);
       return accumulated + 1;
     }, 0);
+  });
+});
+
+describe('reductions()', function () {
+  it('should return an interim reduction for every item', function (done) {
+    var x = makeAccumulatableAtInterval([1, 1, 1, 1]);
+
+    var y = reductions(x, sum, 0);
+
+    accumulate(y, function (accumulated, item) {
+      if(item === end) {
+        assert.strictEqual(accumulated, 5);
+        done();
+        return accumulated;
+      }
+
+      assert.strictEqual(accumulated, item);
+      return accumulated + 1;
+    }, 1);
   });
 });
 
