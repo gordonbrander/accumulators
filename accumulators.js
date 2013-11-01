@@ -238,7 +238,11 @@ var __consumers__ = ns('consumers');
 // Internal helper function that mutates a consumer object.
 // Used in `hub()` (see below).
 function dispatchToConsumer_(item, consumer) {
-  consumer.accumulated = consumer.next(consumer.accumulated, item);
+  // If consumer has not ended of its own accord, accumulate with
+  // latest item.
+  if (consumer.accumulated !== end)
+    consumer.accumulated = consumer.next(consumer.accumulated, item);
+
   return item;
 }
 
