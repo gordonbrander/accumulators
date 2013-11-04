@@ -30,7 +30,7 @@ function makeAssertK(value) {
 function makeAccumulatableAtInterval(array, interval) {
   array = array.slice();
 
-  return hub(accumulatable(function (next, initial) {
+  return accumulatable(function (next, initial) {
     var accumulated = initial;
     var id;
 
@@ -43,7 +43,7 @@ function makeAccumulatableAtInterval(array, interval) {
         accumulated = next(accumulated, array.shift());
       }
     }, interval || 10);
-  }));
+  });
 }
 
 describe('isAccumulatable()', function () {
@@ -176,6 +176,30 @@ describe('reductions()', function () {
 
 describe('hub() transformed accumulateable()', function () {
   it('should allow accumulation from multiple consumers', function () {
-    throw Error('@TODO');
+    // @TODO
+  });
+
+  it('should not continue to send values to consumers who return end', function (done) {
+    var x = hub(makeAccumulatableAtInterval([0, 1, 2, 3]));
+
+    accumulate(x, function (isEnd, item) {
+      if (item === 1) return end;
+
+      if(isEnd === end) throw Error('Item sent after consumer ended');
+
+      return null;
+    }, null);
+
+    accumulate(x, function (accumulated, item) {
+      if(item === end) {
+        assert.strictEqual(accumulated, 4);
+        done();
+        return accumulated;
+      }
+
+      assert.strictEqual(accumulated, item);
+
+      return accumulated + 1;
+    }, 0);
   });
 });
