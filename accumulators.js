@@ -197,7 +197,7 @@ function accumulator(xf) {
         return item === end ? next(accumulated, item) :
                               xf(additional, next, accumulated, item);
       }, initial);
-    });    
+    });
   }
 
   return xformed;
