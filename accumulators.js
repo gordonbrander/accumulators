@@ -189,9 +189,9 @@ function accumulator(xf) {
   function xformed(source, additional) {
     // Return a new accumulatable object who's accumulate method transforms the `next`
     // accumulating function.
-    return accumulatable(function accumulateAccumulatorTransform(next, initial) {
+    return accumulatable(function accumulateXform(next, initial) {
       // `next` is the accumulating function we are transforming. 
-      accumulate(source, function sourceAccumulator(accumulated, item) {
+      accumulate(source, function nextSource(accumulated, item) {
         // We are essentially wrapping next with `xf` provided the `item` is
         // not `end`.
         return item === end ? next(accumulated, item) :
@@ -295,11 +295,11 @@ export hub;
 // first accumulate `left`, then `right`. Used by `concat`.
 function append(left, right) {
   return accumulatable(function accumulateAppend(next, initial) {
-    function accumulatorLeft(accumulated, item) {
+    function nextLeft(accumulated, item) {
       return item === end ? accumulate(right, next, accumulated) : next(accumulated, item);
     }
 
-    accumulate(left, accumulatorLeft, initial);
+    accumulate(left, nextLeft, initial);
   });
 }
 export append;
@@ -312,13 +312,13 @@ export append;
 //     // <1, 2, 3, 'a', 'b', 'c'>
 function concat(source) {
   return accumulatable(function accumulateConcat(next, initial) {
-    function appendAccumulator(a, b) {
+    function nextAppend(a, b) {
       if(b === end) return accumulate(a, next, initial);
 
       return a === null ? b : append(a, b);
     }
 
-    accumulate(source, appendAccumulator, null);
+    accumulate(source, nextAppend, null);
   });
 }
 export concat;
@@ -345,7 +345,7 @@ function merge(source) {
       return accumulated;
     }
 
-    accumulate(source, function accumulateMergeSource(_, nested) {
+    accumulate(source, function nextMerge(_, nested) {
       // If we have reached the end of the sources, pass end token
       // to `forward`.
       if (nested === end) return forward(null, end);
