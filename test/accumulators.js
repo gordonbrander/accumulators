@@ -1,6 +1,5 @@
 var r = require('../node/accumulators.js');
 var accumulatable = r.accumulatable;
-var isAccumulatable = r.isAccumulatable;
 var accumulate = r.accumulate;
 var map = r.map;
 var end = r.end;
@@ -8,8 +7,13 @@ var append = r.append;
 var concat = r.concat;
 var hub = r.hub;
 var reductions = r.reductions;
+var isMethodAt = r.isMethodAt;
 
 var assert = require("assert");
+
+function isAccumulatable(x) {
+  return isMethodAt(x, 'accumulate');
+}
 
 function sum(a, b) {
   return a + b;
@@ -45,13 +49,6 @@ function makeAccumulatableAtInterval(array, interval) {
     }, interval || 10);
   });
 }
-
-describe('isAccumulatable()', function () {
-  var x = accumulatable(function () {});
-
-  it('should return true for accumulatable objects', makeAssertK(isAccumulatable(x)));
-  it('should return false for other values', makeAssertK(!isAccumulatable({}) && !isAccumulatable([])));
-});
 
 describe('accumulate()', function () {
   it("should call next with value for accumulation of primitive values, followed by end token.", function (done) {

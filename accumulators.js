@@ -68,15 +68,6 @@
 //
 // ---
 
-// Namespace a string. Used for creating namespaced object keys that are
-// unlikely to collide. Contract: returned key should always be the same given
-// the same string.
-function ns(string) {
-  return string + '@accumulators';
-}
-
-// Create namespaced key for accumulate method.
-var __accumulate__ = ns('accumulate');
 
 // An `accumulatable` is any object with an accumulate method at the namespaced key.
 // Creates a new accumulatable source by assigning the `accumulate` method to
@@ -107,7 +98,7 @@ function accumulatable(accumulate, o) {
   // Use optional provided object, or create a new one.
   o = o || {};
   // Assign accumulate function to the namespaced accumulate field.
-  o[__accumulate__] = accumulate;
+  o.accumulate = accumulate;
   return o;
 }
 export accumulatable;
@@ -121,20 +112,12 @@ function isMethodAt(thing, key) {
 export isMethodAt;
 
 
-// Check if a thing is accumulatable. Returns boolean.
-// Convenience wrapper for `isMethodAt()`.
-function isAccumulatable(thing) {
-  return isMethodAt(thing, __accumulate__);
-}
-export isAccumulatable;
-
-
 // End is our token that represents the end of an accumulatable source.
 // `accumulatable`s can pass this token as the last item to denote they are
 // finished sending values. Accumulating `next` functions may also return `end`
 // to denote they are finished consuming, and that no further values should
 // be sent.
-var end = ns('Token for end of accumulation');
+var end = 'Token for end of accumulation';
 export end;
 
 
@@ -147,8 +130,8 @@ export end;
 // This means async sources, arrays and primitive values can all be mixed.
 function accumulate(source, next, initial) {
   // If source is accumulatable, call accumulate method.
-  isAccumulatable(source) ?
-    source[__accumulate__](next, initial) :
+  isMethodAt(source, 'accumulate') ?
+    source.accumulate(next, initial) :
     // ...otherwise, if source has a reduce method, fall back to accumulation
     // with reduce, then call `next` with `end` token and result of reduction.
     // Reducible sources are expected to return a value for `reduce`.
@@ -230,11 +213,6 @@ var filter = accumulator(function filterTransform(predicate, next, accumulated, 
 export filter;
 
 
-// Create namespaced keys.
-var __isOpen__ = ns('isOpen');
-var __consumers__ = ns('consumers');
-
-
 // Internal helper function that mutates a consumer object.
 // Used in `hub()` (see below).
 function dispatchToConsumer_(item, consumer) {
@@ -261,20 +239,19 @@ function hub(source) {
   // Create hub object.
   var h = {};
   // Create array to keep track of consumers.
-  h[__consumers__] = [];
+  h.consumers = [];
 
   return accumulatable(function accumulateHub(next, initial) {
-    var hub = this;
-    var consumers = hub[__consumers__];
+    var consumers = this.consumers;
 
     // Add consumer to hub.
     consumers.push({ next: next, accumulated: initial });
 
     // If hub is already open, we don't need to reopen it.
-    if (hub[__isOpen__]) return;
+    if (this.isOpen) return;
 
     // Mark hub open.
-    hub[__isOpen__] = true;
+    this.isOpen = true;
 
     function nextDispatch(_, item) {
       // When item comes from source, dispatch it to all consumers.
