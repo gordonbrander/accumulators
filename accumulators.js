@@ -58,7 +58,7 @@
 // Pretty useful. So an accumulable is any object that implements a special
 // `accumulate()` method, which is the same as `reduce()`, but is not required
 // to return a value. If the object doesn't have an accumulate method, we fall
-// back to `reduce` (e.g. arrays).
+// back to `reduce` (e.g. arrays or Backbone collections).
 
 // The basics
 // ----------
@@ -250,6 +250,34 @@ function take(source, n) {
   });
 }
 export take;
+
+
+function drop(source, n) {
+  // Returns sequence of all `source`'s items after `n`-th one. If source
+  // contains less then `n` items empty sequence is returned.
+
+  if (n < 1) return source;
+  // Don't forget to drop everything if `n` is infinity.
+  if (n === Infinity) return [];
+
+  return accumulatable(function accumulateDrop(next, initial) {
+    // Capture `n`. We're about to mutate it.
+    var  count = n;
+
+    accumulate(source, function nextDrop(accumulated, item) {
+      count = count - 1;
+
+      // If we've dropped enough items, or source is ended, call next with
+      // accumulation and item.
+      if (count === 0 || item === end || accumulated === end)
+        return next(accumulated, item);
+
+      // Otherwise return accumulation for later (drop this iteration).
+      return accumulated;
+    }, initial);
+  });
+}
+export drop;
 
 
 // Internal helper function that mutates a consumer object.
