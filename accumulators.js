@@ -201,7 +201,7 @@ export map;
 
 
 // Composes filtered version of given `source`, such that only items contained
-// will be once on which `f(item)` was `true`.
+// will be once on which `predicate(item)` was `true`.
 // 
 //     var digits = filter([ 10, 23, 2, 7, 17 ], function(value) {
 //       return value >= 0 && value <= 9
@@ -211,6 +211,45 @@ var filter = accumulator(function filterTransform(predicate, next, accumulated, 
   return predicate(item) ? next(accumulated, item) : accumulated;
 });
 export filter;
+
+
+// The opposite of `filter()`. Returns a filtered accumulatable that contains
+// only items for which `predicate(item)` was `false`.
+var reject = accumulator(function rejectTransform(predicate, next, accumulated, item) {
+  return !predicate(item) ? next(accumulated, item) : accumulated;
+});
+export reject;
+
+
+function take(source, n) {
+  // Returns sequence of first `n` items of the given `source`.
+  //
+  //    take([ 1, 2, 3, 4, 5 ], 2))
+  //    > < 1 2 >
+  //
+  //    take([ 1, 2, 3 ], 5))
+  //    > < 1 2 3 >
+
+  // Bypass hot code path if we're not taking any items.
+  // This takes advantage of the rather dubious type casting
+  // that `<` does. Any falsey value will compare as less than 1.
+  if (n < 1) return [];
+
+  return accumulatable(function accumulateTake(next, initial) {
+    // Capture `n`. We're about to mutate it.
+    var count = n;
+
+    accumulate(source, function nextTake(accumulated, item) {
+      // Reduce count.
+      count = count - 1;
+      // Accumulate with value.
+      accumulated = next(accumulated, item);
+      // Return accumulated value, or end source if we've reached the limit.
+      return n > 0 ? accumulated : next(accumulated, end);
+    }, initial);
+  });
+}
+export take;
 
 
 // Internal helper function that mutates a consumer object.
