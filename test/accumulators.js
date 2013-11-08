@@ -69,6 +69,17 @@ describe('accumulate()', function () {
       return (item === end) ? (assert.strictEqual(accumulated, 6), done()) : accumulated + item;
     }, 0);
   });
+
+  it('should consider nullish values to be empty sources of 0 items', function (done) {
+    accumulate(null, function (_, item) {
+      if (item !== end) {
+        throw new Error('null was accumulated');
+      }
+      else {
+        done();
+      }
+    });
+  });
 });
 
 describe('map()', function () {
