@@ -137,8 +137,12 @@ function accumulate(source, next, initial) {
     // Reducible sources are expected to return a value for `reduce`.
     isMethodAt(source, 'reduce') ?
       next(source.reduce(next, initial), end) :
-      // Otherwise, call `next` with value, then `end`.
-      next(next(initial, source), end);
+      // ...otherwise, if source is nullish, end. `null` is considered to be
+      // an empty source.
+      source == null ?
+        next(initial, end) :
+        // Otherwise, call `next` with value, then `end`.
+        next(next(initial, source), end);
 }
 export accumulate;
 
