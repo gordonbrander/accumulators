@@ -8,6 +8,7 @@ var concat = r.concat;
 var hub = r.hub;
 var reductions = r.reductions;
 var isMethodAt = r.isMethodAt;
+var drop = r.drop;
 
 var assert = require("assert");
 
@@ -114,7 +115,7 @@ describe('map()', function () {
 
     accumulate(a, function (accumulated, item) {
       return item === end ? (assert.strictEqual(accumulated, 10), done()) : accumulated + item;
-    }, 0);    
+    }, 0);
   });
 });
 
@@ -179,6 +180,22 @@ describe('reductions()', function () {
       assert.strictEqual(accumulated, item);
       return accumulated + 1;
     }, 1);
+  });
+});
+
+// Type coersion bug?
+describe('drop()', function () {
+  it('should skip n items', function (done) {
+    var x = drop([0, 1, 2, 3, 4], 2);
+
+    accumulate(x, function (accumulated, item) {
+      if(item === end) {
+        assert.strictEqual(accumulated, 9);
+        done();
+      }
+
+      return accumulated + item;
+    }, 0);
   });
 });
 

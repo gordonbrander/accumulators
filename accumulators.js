@@ -237,7 +237,8 @@ function take(source, n) {
   // Bypass hot code path if we're not taking any items.
   // This takes advantage of the rather dubious type casting
   // that `<` does. Any falsey value will compare as less than 1.
-  if (n < 1) return [];
+  // `null` is considered to be an empty source by `accumulate()`.
+  if (n < 1) return null;
 
   return accumulatable(function accumulateTake(next, initial) {
     // Capture `n`. We're about to mutate it.
@@ -260,21 +261,24 @@ function drop(source, n) {
   // Returns sequence of all `source`'s items after `n`-th one. If source
   // contains less then `n` items empty sequence is returned.
 
+  // Don't need to do anything if n is less than one.
   if (n < 1) return source;
+
   // Don't forget to drop everything if `n` is infinity.
-  if (n === Infinity) return [];
+  // `null` is considered to be an empty source by `accumulate()`.
+  if (n === Infinity) return null;
 
   return accumulatable(function accumulateDrop(next, initial) {
     // Capture `n`. We're about to mutate it.
     var  count = n;
 
     accumulate(source, function nextDrop(accumulated, item) {
-      count = count - 1;
-
       // If we've dropped enough items, or source is ended, call next with
       // accumulation and item.
-      if (count === 0 || item === end || accumulated === end)
+      if (count === 0 || item === end)
         return next(accumulated, item);
+
+      count = count - 1;
 
       // Otherwise return accumulation for later (drop this iteration).
       return accumulated;
