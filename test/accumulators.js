@@ -2,6 +2,8 @@ var r = require('../node/accumulators.js');
 var accumulatable = r.accumulatable;
 var accumulate = r.accumulate;
 var map = r.map;
+var filter = r.filter;
+var reject = r.reject;
 var end = r.end;
 var append = r.append;
 var concat = r.concat;
@@ -10,8 +12,6 @@ var reductions = r.reductions;
 var isMethodAt = r.isMethodAt;
 var drop = r.drop;
 var take = r.take;
-var filter = r.filter;
-var reject = r.reject;
 
 var assert = require("assert");
 
@@ -122,6 +122,72 @@ describe('map()', function () {
   });
 });
 
+describe('filter()', function () {
+  var x = [0, 1, 2, 3, 4];
+  var evens = filter(x, function (item) { return !(item % 2); });
+
+  it('should return an accumulatable object', function () {
+    assert(isAccumulatable(evens));
+  });
+
+  it('should skip items that predicate returns false for', function (done) {
+    accumulate(evens, function (accumulated, item) {
+      if (item === end) {
+        assert.strictEqual(accumulated, 6);
+        done();
+      }
+
+      return accumulated + item;
+    }, 0);
+  });
+
+  it('should never see end tokens', function (done) {
+    var x = [1, 1, 1, 1, 1];
+
+    var a = filter(x, function (x) {
+      assert(x !== end);
+      return true;
+    });
+
+    accumulate(a, function(accumulated, item) {
+      return item === end ? (assert.strictEqual(accumulated, 5), done()) : accumulated + item;
+    }, 0);
+  });
+});
+
+describe('reject()', function () {
+  var x = [0, 1, 2, 3, 4];
+  var evens = reject(x, function (item) { return !!(item % 2); });
+
+  it('should return an accumulatable object', function () {
+    assert(isAccumulatable(evens));
+  });
+
+  it('should skip items that predicate returns true for', function (done) {
+    accumulate(evens, function (accumulated, item) {
+      if (item === end) {
+        assert.strictEqual(accumulated, 6);
+        done();
+      }
+
+      return accumulated + item;
+    }, 0);
+  });
+
+  it('should never see end tokens', function (done) {
+    var x = [1, 1, 1, 1, 1];
+
+    var a = reject(x, function (x) {
+      assert(x !== end);
+      return false;
+    });
+
+    accumulate(a, function(accumulated, item) {
+      return item === end ? (assert.strictEqual(accumulated, 5), done()) : accumulated + item;
+    }, 0);
+  });
+});
+
 describe('append()', function () {
   var a = makeAccumulatableAtInterval([0, 1, 2]);
   var b = makeAccumulatableAtInterval([3, 4, 5]);
@@ -186,6 +252,7 @@ describe('reductions()', function () {
   });
 });
 
+// Type coersion bug?
 describe('drop()', function () {
   it('should skip n items', function (done) {
     var x = drop([0, 1, 2, 3, 4], 2);
