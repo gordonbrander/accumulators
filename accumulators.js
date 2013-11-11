@@ -398,8 +398,50 @@ function merge(source) {
 export merge;
 
 
-// Async source helpers
-// --------------------
+// Given any `thing`, returns `thing`. Useful for fallback.
+function id(thing) {
+  return thing;
+}
+
+
+// Sample an item from `source` every time an item appears in `triggers` source
+// where `source` and `triggers` are both accumulatables. For example, sampling
+// mouse move events that coencide with click events looks like this:
+// 
+//     sample(on(el, 'mousemove'), on(el, 'click'))
+// 
+// Probably only useful for sources where items appear over multiple turns
+// of the event loop.
+function sample(source, triggers, assemble) {
+  return accumulatable(function accumulateSamples(next, initial) {
+    // Assemble is a function that will be called with sample and trigger item.
+    // You may specify a sample function. If you don't it will fall back to `id`
+    // which will return the value of the sampled item.
+    assemble = assemble || id;
+
+    // Create closure variable to keep most recent sample.
+    var sampled;
+
+    function nextSource(_, item) {
+      // Assign most recent item to closure variable.
+      if(item !== end) sampled = item;
+    }
+
+    function nextTrigger(accumulated, item) {
+      // Assemble sampled value with item and accumulate with `next()`.
+      return next(accumulated, assemble(sampled, item));
+    }
+
+    // Begin accumulation of both sources.
+    accumulate(source, nextSource);
+    accumulate(triggers, nextTrigger, initial);
+  });
+}
+export sample;
+
+
+// Other helpers
+// -------------
 
 
 // Internal helper function that mutates a consumer object.
@@ -459,46 +501,17 @@ function hub(source) {
 export hub;
 
 
-// Given any `thing`, returns `thing`. Useful for fallback.
-function id(thing) {
-  return thing;
+// Create an accumulator function from 2 functions: `next()`, an accumulator
+// that will be called for every value except `end`, and `last()`, another
+// accmulator that will only be called for `end`.
+function handleEnd(next, last) {
+  // `last()` is optional. If no `last()` is specified, fall back to `id()`.
+  last = last || id;
+  return function nextIgnoreEnd(accumulated, item) {
+    return (item !== end) ? next(accumulated, item) : last(accumulated, end);
+  }
 }
-
-
-// Sample an item from `source` every time an item appears in `triggers` source
-// where `source` and `triggers` are both accumulatables. For example, sampling
-// mouse move events that coencide with click events looks like this:
-// 
-//     sample(on(el, 'mousemove'), on(el, 'click'))
-// 
-// Probably only useful for sources where items appear over multiple turns
-// of the event loop.
-function sample(source, triggers, assemble) {
-  return accumulatable(function accumulateSamples(next, initial) {
-    // Assemble is a function that will be called with sample and trigger item.
-    // You may specify a sample function. If you don't it will fall back to `id`
-    // which will return the value of the sampled item.
-    assemble = assemble || id;
-
-    // Create closure variable to keep most recent sample.
-    var sampled;
-
-    function nextSource(_, item) {
-      // Assign most recent item to closure variable.
-      if(item !== end) sampled = item;
-    }
-
-    function nextTrigger(accumulated, item) {
-      // Assemble sampled value with item and accumulate with `next()`.
-      return next(accumulated, assemble(sampled, item));
-    }
-
-    // Begin accumulation of both sources.
-    accumulate(source, nextSource);
-    accumulate(triggers, nextTrigger, initial);
-  });
-}
-export sample;
+export handleEnd;
 
 
 // Browser helpers: animation, DOM events, etc
