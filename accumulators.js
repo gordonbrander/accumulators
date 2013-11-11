@@ -459,48 +459,6 @@ function hub(source) {
 export hub;
 
 
-function add_(pushable, item) {
-  pushable.push(item);
-  return pushable;
-}
-
-
-// Throttle source, making sure it only yields a value once every x ms.
-// Returns an accumulatable.
-function throttle(source, ms) {
-  return accumulatable(function accumulateThrottled(next, initial) {
-    // Stack will contain our values from stream.
-    var stack = [];
-    // Assign initial to closure variable.
-    var accumulated = initial;
-
-    // Start accumulating source into stack.
-    accumulate(source, add_, stack);
-
-    function throttled() {
-      // If stack is currently empty, pass. Wait until next time.
-      if(stack.length === 0) return;
-
-      // At each interval, shift an item off the bottom of the stack and
-      // serve it up. First in, first out.
-      var item = stack.shift();
-
-      // If item is end token, stop the interval timer.
-      if(item === end) clearInterval(id);
-
-      // Call next with accumulated and item (whatever it is).
-      next(accumulated, item);
-    }
-
-    throttled();
-
-    // Start interval timer.
-    var id = setInterval(throttled, ms);
-  });
-}
-export throttle;
-
-
 // Given any `thing`, returns `thing`. Useful for fallback.
 function id(thing) {
   return thing;
