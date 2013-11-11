@@ -1,38 +1,38 @@
 // Accumulators
 // =============================================================================
-// 
+//
 // A tiny library for reactive programming that offers blazing fast generic
 // collection manipulation, asyncronous flow control and the ability to
 // represent infinitely large collections.
-// 
+//
 // Copyright Gordon Brander, 2013. Released under the terms of the [MIT license](http://opensource.org/licenses/MIT).
-// 
+//
 // Background:
-// 
+//
 // * [Reducers - A Library and Model for Collection Processing](http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html)
 // * [Anatomy of a Reducer](http://clojure.com/blog/2012/05/15/anatomy-of-reducer.html)
-// 
+//
 // Prior art:
-// 
+//
 // * https://github.com/Gozala/reducers/
 // * https://github.com/Gozala/reducible/
-// 
+//
 // What & How
 // ----------
-// 
+//
 // This file is just a tiny JavaScript implementation of [Clojure Reducers](http://clojure.com/blog/2012/05/08/reducers-a-library-and-model-for-collection-processing.html).
-// 
+//
 // Reducers are an answer to the question: "what is the minimum necessary
 // interface for a collection?". A collection is anything that can be
 // `reduce`d, because `reduce` can produce any other value from a collection.
 // In JS, we might say a collection is any object with a `reduce` method.
 // This simple idea has _awesome_ consequences...
-// 
+//
 // With such a small interface, custom collection types can be created simply by
 // defining a method called `reduce` that describes how to step through the
 // collection and accumulate a value. Want to mix a typed array and a linked
 // list? No problem. Simply define a `reduce` for each and mix away.
-// 
+//
 // What about `map`, `filter`, `concat` and friends? We can define them
 // as function transformations of the _reducer_ function (the function you
 // give to `reduce` describing the recipe for reduction). `map`, `filter`, et al
@@ -40,14 +40,14 @@
 // done when we pass the resulting function to `reduce`. This has the happy
 // effect of making large collection manipulations very fast because no
 // intermediate representation of the collection is created in memory.
-// 
+//
 // The _reducer_ function can be called at any time by `reduce`, so if we take
 // away the requirement for `reduce` to return a value, we can even represent
 // _asyncronous_ collections. In this library, we call a `reduce` that returns
 // no value `accumulate`.
-// 
+//
 // Why would we want to do this?
-// 
+//
 // * If items can appear during multiple turns of the event loop, you can
 //   represent _infinitely long streams_.
 // * An async collection can be used to control a flow of events, because
@@ -62,7 +62,7 @@
 
 // The basics
 // ----------
-// 
+//
 // The base implementation: helpers for defining and
 // duck-typing accumulatables, and an `accumulate` function.
 //
@@ -72,26 +72,26 @@
 // An `accumulatable` is any object with an accumulate method at the namespaced key.
 // Creates a new accumulatable source by assigning the `accumulate` method to
 // the correct namespaced key on an object.
-// 
+//
 // The mechanics of _how_ the accumulation happens are left up to the
 // `accumulate` method.
-// 
+//
 // `accumulate` takes the same arguments as `reduce` method, but it is not
 // expected to return a value.
-// 
+//
 //     function accumulate(next, initial) { ... }
 //
 // ...where `next` is a reducer function -- a function with shape:
-// 
+//
 //     function next(accumulated, item) { ... }
-// 
+//
 // Accumulatable sources are just a series of calls to `next` within
 // `accumulate` method.
-// 
+//
 // Because `accumulate` is not expected to return a value, calls to `next` by
 // accumulate may happen over multiple turns of the event loop, allowing
 // accumulation of async sources to happen.
-// 
+//
 // Since accumulate does not return a value, we use a special `end` token to
 // denote the end of a sequence (see below).
 function accumulatable(accumulate, o) {
@@ -122,10 +122,10 @@ export end;
 
 
 // Accumulate a source with a `next` reducer function and `initial` value.
-// 
+//
 // Accumulate does not return any value, meaning sources may yield values at
 // any turn of the event loop.
-// 
+//
 // Any value type can be accumulated with `accumulate` function.
 // This means async sources, arrays and primitive values can all be mixed.
 function accumulate(source, next, initial) {
@@ -159,23 +159,23 @@ export accumulate;
 // Convenience function to simplify definitions of transformation function, to
 // avoid manual definition of `accumulatable` results and currying transformation
 // function.
-// 
+//
 // From a pure data `xf` function that is called on each value for a
 // collection with following arguments:
-// 
+//
 // 1. `additional` - Options passed to the resulting transformation function
 // most commonly that's a function like in `map(source, f)`.
 // 2. `next` - Function which needs to be invoked with transformed value,
 // or simply not called to skip the value.
 // 3. `accumulated` - Accumulate value.
 // 4. `item` - Last value emitted by a collection being accumulated.
-// 
+//
 // Function is supposed to return new, accumulated `result`. It may either
 // pass mapped transformed `value` and `result` to the `next` continuation
 // or skip it.
-// 
+//
 // For example see `map` and `filter` functions.
-// 
+//
 // A riff on reducer in https://github.com/clojure/clojure/blob/master/src/clj/clojure/core/reducers.clj.
 function accumulator(xf) {
   function xformed(source, additional) {
@@ -199,10 +199,10 @@ export accumulator;
 
 // Returns transformed version of given `source` where each item of it
 // is mapped using `f`.
-// 
+//
 //     var data = [{ name: "foo" }, { name: "bar" }]
-//     var names = map(data, function(item) { return item.name })
-//     // <"foo", "bar">
+//     map(data, function(item) { return item.name })
+//     >> <"foo", "bar", end>
 var map = accumulator(function mapTransform(mapper, next, accumulated, item) {
   return next(accumulated, mapper(item));
 });
@@ -211,11 +211,11 @@ export map;
 
 // Composes filtered version of given `source`, such that only items contained
 // will be once on which `predicate(item)` was `true`.
-// 
-//     var digits = filter([ 10, 23, 2, 7, 17 ], function(value) {
+//
+//     filter([ 10, 23, 2, 7, 17 ], function(value) {
 //       return value >= 0 && value <= 9
 //     })
-//     // <2, 7>
+//     >> <2, 7, end>
 var filter = accumulator(function filterTransform(predicate, next, accumulated, item) {
   return predicate(item) ? next(accumulated, item) : accumulated;
 });
@@ -234,11 +234,11 @@ export reject;
 function take(source, n) {
   // Returns sequence of first `n` items of the given `source`.
   //
-  //    take([ 1, 2, 3, 4, 5 ], 2))
-  //    > < 1 2 >
+  //     take([ 1, 2, 3, 4, 5 ], 2))
+  //     >> <1, 2, end>
   //
-  //    take([ 1, 2, 3 ], 5))
-  //    > < 1 2 3 >
+  //     take([ 1, 2, 3 ], 5))
+  //     >> <1, 2, 3, end>
 
   // Bypass hot code path if we're not taking any items.
   // This takes advantage of the rather dubious type casting
@@ -289,8 +289,7 @@ function drop(source, n) {
     accumulate(source, function nextDrop(accumulated, item) {
       // If we've dropped enough items, or source is ended, call next with
       // accumulation and item.
-      if (count === 0 || item === end)
-        return next(accumulated, item);
+      if (count === 0 || item === end) return next(accumulated, item);
 
       count = count - 1;
 
@@ -345,9 +344,9 @@ export append;
 
 // Concatenate a 2D source of sources, returning a new accumulatable 1D source
 // where items are ordered by source order.
-// 
+//
 //     concat([[1, 2, 3], ['a', 'b', 'c']])
-//     // <1, 2, 3, 'a', 'b', 'c'>
+//     >> <1, 2, 3, 'a', 'b', 'c', end>
 function concat(source) {
   return accumulatable(function accumulateConcat(next, initial) {
     function nextAppend(a, b) {
@@ -364,9 +363,9 @@ export concat;
 
 // Merge a 2D source of sources, returning a new accumulatable 1D source,
 // where items are ordered by time. In pseudo-code:
-// 
+//
 //     merge(<<1, 2, 3>, <'a', 'b', 'c'>>)
-//     // <1, 'a' 2, 3, 'b', 'c'>
+//     >> <1, 'a' 2, 3, 'b', 'c', end>
 function merge(source) {
   return accumulatable(function accumulateMerge(next, initial) {
     var accumulated = initial;
@@ -407,9 +406,9 @@ function id(thing) {
 // Sample an item from `source` every time an item appears in `triggers` source
 // where `source` and `triggers` are both accumulatables. For example, sampling
 // mouse move events that coencide with click events looks like this:
-// 
+//
 //     sample(on(el, 'mousemove'), on(el, 'click'))
-// 
+//
 // Probably only useful for sources where items appear over multiple turns
 // of the event loop.
 function sample(source, triggers, assemble) {
@@ -461,11 +460,12 @@ function dispatchToConsumer_(item, consumer) {
 // allows you to transform a source of this type so it can be accumulated
 // multiple times. It does this by keeping a list of consumers and dispatching
 // items in source to each of them. Usage:
-// 
+//
 //     hub(accumulatable(function (next, initial) { ... }))
-// 
+//
 // @TODO close source if all consumers pass back `end`. Nice to have. Probably
 // not crucial for most use cases.
+//
 // @TODO if hub ends sources, should also throw exception if source continues
 // to send values after being ended prematurely.
 function hub(source) {
@@ -520,7 +520,7 @@ export handleEnd;
 
 // A wrapper for [requestAnimationFrame][raf], patching up browser support and
 // preventing exceptions in non-browser environments (node).
-// 
+//
 // [raf]: https://developer.mozilla.org/en-US/docs/Web/API/window.requestAnimationFrame
 function requestAnimationFrame(callback) {
   // Use any available requestAnimationFrame.
@@ -571,3 +571,4 @@ function on(element, event) {
   }));
 }
 export on;
+
