@@ -138,10 +138,15 @@ function accumulate(source, next, initial) {
     isMethodAt(source, 'reduce') ?
       next(source.reduce(next, initial), end) :
       // ...otherwise, if source is nullish, end. `null` is considered to be
-      // an empty source.
+      // an empty source (akin to an empty array). This approach takes
+      // inspiration from Lisp dialects, where `null` literally _is_ an empty
+      // list. It also just makes sense: `null` is a non-value, and should
+      // not accumulate.
       source == null ?
         next(initial, end) :
-        // Otherwise, call `next` with value, then `end`.
+        // Otherwise, call `next` with value, then `end`. I.e, values without
+        // a `reduce`/`accumulate` method are treated as sources containing
+        // one item.
         next(next(initial, source), end);
 }
 export accumulate;
@@ -319,6 +324,8 @@ function dispatchToConsumer_(item, consumer) {
 // 
 // @TODO close source if all consumers pass back `end`. Nice to have. Probably
 // not crucial for most use cases.
+// @TODO if hub ends sources, should also throw exception if source continues
+// to send values after being ended prematurely.
 function hub(source) {
   // Create hub object.
   var h = {};
