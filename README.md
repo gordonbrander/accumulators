@@ -1,16 +1,24 @@
+Accumulators
+============
+
+The literate comments in <./accumulators.js> offer the best intro to what
+the library is, how it works and how to use it.
+
+
 How to use it
 -------------
 
-Install
+Installing with npm:
 
-    bower install ___
+    npm install ...
 
+You can also install accumulators using Bower for browser-side use:
 
-Include it in your page:
+    bower install ...
+
+Or, just download it and include it in your page:
 
     <script src="path/to/accumulators.js"></script>
-
-@TODO
 
 Running the tests
 
@@ -21,14 +29,14 @@ Running the tests
 -----
 
 * Register package with Bower.
-* Write test for filter()
-* Write test for reject()
 * Write XHR wrapper
 * Write XHR wrapper test
 * Consider moving design decisions and @TODOs to the bottom of accumulators.js
 
 @DONE
 
+* Write test for filter()
+* Write test for reject()
 * Write test for take()
 
 
@@ -48,11 +56,15 @@ to happen at least.
 
 ---
 
-The performance of closures vs prototypal instance creation for one-off cases
-varies wildly between browsers http://jsperf.com/closure-vs-prototype-access.
+The performance of closures vs prototypal instance creation varies wildly
+between browsers and use-cases. See
+<http://jsperf.com/closure-vs-prototype-access> for a rough example of how
+accumulators might use prototypal methods and how they would perform.
+
 It's clear that both prototypes and closures have optimized code paths under
 certain conditions. Since accumulators only allocates once for each
 transformation, the use case skews much closer to one-offs. Closure seems the
-most reasonable way to go for now. However, `accumulatable()` allows for
-prototypal inheritance and method access to be used on a case-by-case basis.
+most reasonable way to go for most cases. However, `accumulatable()` allows for
+prototypal inheritance and method access to be used on a case-by-case basis if
+you want.
 
