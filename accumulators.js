@@ -218,7 +218,8 @@ export filter;
 
 
 // The opposite of `filter()`. Returns a filtered accumulatable that contains
-// only items for which `predicate(item)` was `false`.
+// only items for which `predicate(item)` was `false`. Useful for splitting
+// a source into 2 parts with the same predicate function.
 var reject = accumulator(function rejectTransform(predicate, next, accumulated, item) {
   return !predicate(item) ? next(accumulated, item) : accumulated;
 });
@@ -245,12 +246,20 @@ function take(source, n) {
     var count = n;
 
     accumulate(source, function nextTake(accumulated, item) {
-      // Reduce count.
+      // Decrement count.
       count = count - 1;
+
+      // For cases where take has ended source, but source is still sending
+      // values, keep returning `end` token and bypass accumulation.
+      // Necessary for arrays. Most other sources should know to `end` when
+      // told to.
+      if (count < 0) return end;
+
       // Accumulate with value.
       accumulated = next(accumulated, item);
-      // Return accumulated value, or end source if we've reached the limit.
-      return n > 0 ? accumulated : next(accumulated, end);
+
+      // Return accumulated value, or `end` source if we've reached the limit.
+      return count === 0 ? next(accumulated, end) : accumulated;
     }, initial);
   });
 }

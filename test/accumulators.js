@@ -9,6 +9,9 @@ var hub = r.hub;
 var reductions = r.reductions;
 var isMethodAt = r.isMethodAt;
 var drop = r.drop;
+var take = r.take;
+var filter = r.filter;
+var reject = r.reject;
 
 var assert = require("assert");
 
@@ -183,7 +186,6 @@ describe('reductions()', function () {
   });
 });
 
-// Type coersion bug?
 describe('drop()', function () {
   it('should skip n items', function (done) {
     var x = drop([0, 1, 2, 3, 4], 2);
@@ -191,6 +193,21 @@ describe('drop()', function () {
     accumulate(x, function (accumulated, item) {
       if(item === end) {
         assert.strictEqual(accumulated, 9);
+        done();
+      }
+
+      return accumulated + item;
+    }, 0);
+  });
+});
+
+describe('take()', function () {
+  it('should only take n items from source, returning a new source of n items', function (done) {
+    var x = take([0, 1, 2, 3, 4], 2);
+
+    accumulate(x, function (accumulated, item) {
+      if(item === end) {
+        assert.strictEqual(accumulated, 1);
         done();
       }
 
