@@ -302,61 +302,31 @@ function drop(source, n) {
 export drop;
 
 
-// Internal helper function that mutates a consumer object.
-// Used in `hub()` (see below).
-function dispatchToConsumer_(item, consumer) {
-  // If consumer has not ended of its own accord, accumulate with
-  // latest item.
-  if (consumer.accumulated !== end)
-    consumer.accumulated = consumer.next(consumer.accumulated, item);
+// Transform a source, reducing values from the source's `item`s using `xf`, a
+// reducer function. Returns a new source containing the reductions over time.
+function reductions(source, xf, initial) {
+  var reduction = initial;
 
-  return item;
-}
+  return accumulatable(function accumulateReductions(next, initial) {
+    // Define a `next` function for accumulation.
+    function nextReduction(accumulated, item) {
+      reduction = xf(reduction, item);
 
-
-// Some sources, like event streams, can only be accumulated once. Events in
-// the source happen, but no reference is kept in memory by the source. `hub()`
-// allows you to transform a source of this type so it can be accumulated
-// multiple times. It does this by keeping a list of consumers and dispatching
-// items in source to each of them. Usage:
-// 
-//     hub(accumulatable(function (next, initial) { ... }))
-// 
-// @TODO close source if all consumers pass back `end`. Nice to have. Probably
-// not crucial for most use cases.
-// @TODO if hub ends sources, should also throw exception if source continues
-// to send values after being ended prematurely.
-function hub(source) {
-  // Create hub object.
-  var h = {};
-  // Create array to keep track of consumers.
-  h.consumers = [];
-
-  return accumulatable(function accumulateHub(next, initial) {
-    var consumers = this.consumers;
-
-    // Add consumer to hub.
-    consumers.push({ next: next, accumulated: initial });
-
-    // If hub is already open, we don't need to reopen it.
-    if (this.isOpen) return;
-
-    // Mark hub open.
-    this.isOpen = true;
-
-    function nextDispatch(_, item) {
-      // When item comes from source, dispatch it to all consumers.
-      consumers.reduce(dispatchToConsumer_, item);
-
-      // If item is end token, empty all consumers from array. We're done.
-      if (item === end) consumers.splice(0, consumers.length);
+      return item === end ?
+        next(accumulated, end) :
+        // If item is not `end`, pass accumulated value to next along with
+        // reduction created by `xf`.
+        next(accumulated, reduction);
     }
 
-    // Begin accumulation of source.
-    accumulate(source, nextDispatch);
-  }, h);
+    accumulate(source, nextReduction, initial);
+  });
 }
-export hub;
+export reductions;
+
+
+// Combining sources
+// -----------------
 
 
 // Given 2 sources, `left` and `right`, return a new accumulatable which will
@@ -428,27 +398,65 @@ function merge(source) {
 export merge;
 
 
-// Transform a source, reducing values from the source's `item`s using `xf`, a
-// reducer function. Returns a new source containing the reductions over time.
-function reductions(source, xf, initial) {
-  var reduction = initial;
+// Async source helpers
+// --------------------
 
-  return accumulatable(function accumulateReductions(next, initial) {
-    // Define a `next` function for accumulation.
-    function nextReduction(accumulated, item) {
-      reduction = xf(reduction, item);
 
-      return item === end ?
-        next(accumulated, end) :
-        // If item is not `end`, pass accumulated value to next along with
-        // reduction created by `xf`.
-        next(accumulated, reduction);
+// Internal helper function that mutates a consumer object.
+// Used in `hub()` (see below).
+function dispatchToConsumer_(item, consumer) {
+  // If consumer has not ended of its own accord, accumulate with
+  // latest item.
+  if (consumer.accumulated !== end)
+    consumer.accumulated = consumer.next(consumer.accumulated, item);
+
+  return item;
+}
+
+
+// Some sources, like event streams, can only be accumulated once. Events in
+// the source happen, but no reference is kept in memory by the source. `hub()`
+// allows you to transform a source of this type so it can be accumulated
+// multiple times. It does this by keeping a list of consumers and dispatching
+// items in source to each of them. Usage:
+// 
+//     hub(accumulatable(function (next, initial) { ... }))
+// 
+// @TODO close source if all consumers pass back `end`. Nice to have. Probably
+// not crucial for most use cases.
+// @TODO if hub ends sources, should also throw exception if source continues
+// to send values after being ended prematurely.
+function hub(source) {
+  // Create hub object.
+  var h = {};
+  // Create array to keep track of consumers.
+  h.consumers = [];
+
+  return accumulatable(function accumulateHub(next, initial) {
+    var consumers = this.consumers;
+
+    // Add consumer to hub.
+    consumers.push({ next: next, accumulated: initial });
+
+    // If hub is already open, we don't need to reopen it.
+    if (this.isOpen) return;
+
+    // Mark hub open.
+    this.isOpen = true;
+
+    function nextDispatch(_, item) {
+      // When item comes from source, dispatch it to all consumers.
+      consumers.reduce(dispatchToConsumer_, item);
+
+      // If item is end token, empty all consumers from array. We're done.
+      if (item === end) consumers.splice(0, consumers.length);
     }
 
-    accumulate(source, nextReduction, initial);
-  });
+    // Begin accumulation of source.
+    accumulate(source, nextDispatch);
+  }, h);
 }
-export reductions;
+export hub;
 
 
 function add_(pushable, item) {
