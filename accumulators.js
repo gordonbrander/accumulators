@@ -572,3 +572,87 @@ function on(element, event) {
 }
 export on;
 
+
+// An accumulators wrapper for XHR. Handles all the ugly machinery of making
+// XMLHttpRequests. All parameters except `url` and `method` are optional.
+// Returns an accumulatable source object.
+//
+//     request('http://foo.com/x.json', 'GET');
+//     > <httpStatusCode, headers, body, end>
+//
+// Tip: use with drop to skip response code/headers, returning a source
+// containing only response body:
+//
+//     drop(request('y.json', 'GET'), 2);
+//     > <body, end>
+//
+// <https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest>
+function request(url, method, body, headers, timeout, responseType, mimeType, credentials) {
+  return hub(accumulatable(function accumulateXhr(next, initial) {
+    var accumulated = initial;
+
+    var req = new XMLHttpRequest();
+
+    // Configure request properties.
+    if (responseType) req.responseType = responseType;
+    if (mimeType) req.overrideMimeType(mimeType);
+    if (timeout) req.timeout = timeout;
+
+    // Set any request headers. Headers are described using an object where key
+    // is the header key and value is the header value.
+    if (headers) for (var key in headers) req.setRequestHeader(key, headers[key]);
+
+    function readyStateListener() {
+      // readyState 2: 'send()' has been called, and headers and status are
+      // available. Accumulate headers and status.
+      if (this.readyState === 2) {
+        accumulated = next(accumulated, this.status);
+        accumulated = next(accumulated, this.getAllResponseHeaders());
+      }
+      // Otherwise, if accumulator ended source during readyState 2, abort
+      // request and clean up.
+      else if (accumulated === end) {
+        this.onreadystatechange = null;
+        this.abort();
+      }
+      // readyState 4: response is complete. Handle our 2 end-of-source
+      // scenarios. If request was received and finished response, clean up.
+      else if (this.readyState === 4) {
+        // Remove pointer to callback.
+        this.onreadystatechange = null;
+
+        accumulated = next(accumulated, this.responseText);
+
+        // Accumulate error if there was one.
+        if (this.error) accumulated = next(accumulated, this.error);
+
+        // End the source.
+        next(accumulated, end);
+      }
+    }
+
+    // Attach listener. Note that all listeners must be attached before
+    // issuing request.
+    req.onreadystatechange = readyStateListener;
+
+    // Make sure method is ALL CAPS to avoid browser bug footgun where lowercase
+    // HTTP verbs prevent XHR success.
+    method = method.toUpperCase();
+
+    // Open request. If username and password were specified, configure xhr
+    // object and pass those along.
+    if (credentials) {
+      req.withCredentials = true;
+      req.open(method, url, true, credentials.username, credentials.password);
+    }
+    // Otherwise, open a request sans credentials.
+    else {
+      req.open(method, url, true);
+    }
+
+    // Send any data to the server.
+    req.send(body);
+  }));
+}
+export request;
+
