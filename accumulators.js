@@ -69,9 +69,9 @@
 // ---
 
 
-// An `accumulatable` is any object with an accumulate method at the namespaced key.
-// Creates a new accumulatable source by assigning the `accumulate` method to
-// the correct namespaced key on an object.
+// An `accumulatable` is any object with an `accumulate()` method.
+// Creates a new accumulatable source by assigning the `accumulate()` method to
+// an object `o`.
 //
 // The mechanics of _how_ the accumulation happens are left up to the
 // `accumulate` method.
@@ -97,7 +97,7 @@
 function accumulatable(accumulate, o) {
   // Use optional provided object, or create a new one.
   o = o || {};
-  // Assign accumulate function to the namespaced accumulate field.
+  // Assign accumulate function to the `accumulate` field.
   o.accumulate = accumulate;
   return o;
 }
