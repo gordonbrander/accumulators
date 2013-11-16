@@ -1,12 +1,13 @@
 Accumulators
 ============
 
-The literate comments in <./accumulators.js> offer the best intro to what
-the library is, how it works and how to use it.
+See the literate comments in [accumulators.js](./accumulators.js).
 
 
 How to use it
 -------------
+
+@TODO
 
 Installing with npm:
 
@@ -22,6 +23,7 @@ Or, just download it and include it in your page:
 
 Running the tests
 
+    npm install
     make tests
 
 
@@ -29,7 +31,6 @@ Running the tests
 -----
 
 * Register package with Bower.
-* Write XHR wrapper
 * Write XHR wrapper test
 * Consider moving design decisions and @TODOs to the bottom of accumulators.js
 
@@ -38,6 +39,7 @@ Running the tests
 * Write test for filter()
 * Write test for reject()
 * Write test for take()
+* Write XHR wrapper
 
 
 Design decisions
